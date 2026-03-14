@@ -1,0 +1,117 @@
+/* app/globals.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── CSS design tokens — dark is default ─────────────────── */
+:root {
+  /* Dark theme (default) */
+  --background:             222.2 84% 4.9%;
+  --foreground:             210 40% 98%;
+  --card:                   222.2 47.4% 11.2%;
+  --card-foreground:        210 40% 98%;
+  --border:                 217.2 32.6% 17.5%;
+  --input:                  217.2 32.6% 17.5%;
+  --primary:                217.2 91.2% 59.8%;
+  --primary-foreground:     222.2 47.4% 11.2%;
+  --muted:                  217.2 32.6% 17.5%;
+  --muted-foreground:       215 20.2% 65.1%;
+  --destructive:            0 62.8% 30.6%;
+  --destructive-foreground: 210 40% 98%;
+  --ring:                   217.2 91.2% 59.8%;
+  --radius:                 0.75rem;
+
+  /* Resolved vars for Recharts / inline CSS usage */
+  --color-background:       hsl(222.2 84% 4.9%);
+  --color-foreground:       hsl(210 40% 98%);
+  --color-card:             hsl(222.2 47.4% 11.2%);
+  --color-card-foreground:  hsl(210 40% 98%);
+  --color-border:           hsl(217.2 32.6% 17.5%);
+  --color-muted:            hsl(217.2 32.6% 17.5%);
+  --color-muted-foreground: hsl(215 20.2% 65.1%);
+  --color-primary:          hsl(217.2 91.2% 59.8%);
+  --color-destructive:      hsl(0 62.8% 30.6%);
+}
+
+/* ── Light mode ─────────────────────────────────────────── */
+.light {
+  --background:             0 0% 96%;
+  --foreground:             222.2 84% 4.9%;
+  --card:                   0 0% 100%;
+  --card-foreground:        222.2 84% 4.9%;
+  --border:                 214.3 31.8% 86%;
+  --input:                  214.3 31.8% 86%;
+  --primary:                221.2 83.2% 53.3%;
+  --primary-foreground:     210 40% 98%;
+  --muted:                  210 40% 92%;
+  --muted-foreground:       215.4 16.3% 40%;
+  --destructive:            0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --ring:                   221.2 83.2% 53.3%;
+  color-scheme: light;
+
+  /* Resolved vars for Recharts / inline CSS usage */
+  --color-background:       hsl(0 0% 96%);
+  --color-foreground:       hsl(222.2 84% 4.9%);
+  --color-card:             hsl(0 0% 100%);
+  --color-card-foreground:  hsl(222.2 84% 4.9%);
+  --color-border:           hsl(214.3 31.8% 86%);
+  --color-muted:            hsl(210 40% 92%);
+  --color-muted-foreground: hsl(215.4 16.3% 40%);
+  --color-primary:          hsl(221.2 83.2% 53.3%);
+  --color-destructive:      hsl(0 84.2% 60.2%);
+}
+
+/* ── Base styles ────────────────────────────────────────── */
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
+  body {
+    background-color: hsl(var(--background));
+    color:            hsl(var(--foreground));
+  }
+}
+
+/* ── Scrollbar ──────────────────────────────────────────── */
+::-webkit-scrollbar        { width: 6px; height: 6px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: hsl(var(--border)); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground)); }
+
+/* ── Date/time inputs ───────────────────────────────────── */
+input[type="date"],
+input[type="time"]         { color-scheme: dark; }
+.light input[type="date"],
+.light input[type="time"]  { color-scheme: light; }
+
+/* ── Focus ring ─────────────────────────────────────────── */
+*:focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+}
+
+/* ── Light mode overrides for hardcoded slate-* classes ──── */
+/* (pages that use bg-slate-900, text-white, etc. directly)   */
+.light body                { background-color: hsl(var(--background)); color: hsl(var(--foreground)); }
+.light .bg-slate-950       { background-color: #f1f5f9 !important; }
+.light .bg-slate-900       { background-color: #ffffff !important; }
+.light .bg-slate-800       { background-color: #f1f5f9 !important; }
+.light .bg-slate-800\/40   { background-color: #f4f6f9 !important; }
+.light .bg-slate-800\/60   { background-color: #eef0f4 !important; }
+.light .bg-slate-950\/50   { background-color: #f4f6f9 !important; }
+.light .border-slate-800   { border-color: #e2e8f0    !important; }
+.light .border-slate-700   { border-color: #cbd5e1    !important; }
+.light .text-white         { color: #0f172a            !important; }
+.light .text-slate-300     { color: #334155            !important; }
+.light .text-slate-400     { color: #475569            !important; }
+.light .text-slate-500     { color: #64748b            !important; }
+.light .text-slate-600     { color: #94a3b8            !important; }
+
+/* Sidebar/header specific */
+.light .bg-slate-900.border-r,
+.light .bg-slate-900.border-l  { background-color: #ffffff !important; }
+.light .bg-slate-950           { background-color: #f8fafc !important; }
+
+/* ── RTL support ────────────────────────────────────────── */
+[dir="rtl"] { font-family: 'Segoe UI', 'Arial', sans-serif; }
