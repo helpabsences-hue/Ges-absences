@@ -1,10 +1,10 @@
 // app/api/invite/route.ts
 import { createClient } from '@/lib/supabase/server'
 import { sendInvitationEmail } from '@/lib/email'
-import { NextResponse } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
 import type { InvitePayload } from '@/types'
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   const body: InvitePayload = await request.json()
   const { email, role } = body
 
@@ -84,7 +84,7 @@ export async function POST(request: Request) {
   return NextResponse.json({
     success: true,
     token: invitation.token,                          // handy for manual sharing
-    inviteUrl: `${process.env.NEXT_PUBLIC_APP_URL}/auth/invite?token=${invitation.token}`,
+    inviteUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin}/auth/invite?token=${invitation.token}`,
     emailError: emailError ?? null,                   // null = email sent fine
   })
 }

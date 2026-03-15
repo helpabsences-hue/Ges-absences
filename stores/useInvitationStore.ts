@@ -9,7 +9,7 @@ interface InvitationState {
   sending:     boolean
   error:       string | null
   success:     string | null
-  inviteUrl:   string | null   // set when email fails but row was created
+  inviteUrl:   string | null
 
   fetchInvitations:  () => Promise<void>
   sendInvitation:    (payload: InvitePayload) => Promise<boolean>
@@ -29,9 +29,24 @@ export const useInvitationStore = create<InvitationState>((set, get) => ({
   fetchInvitations: async () => {
     set({ loading: true, error: null })
     const supabase = createClient()
+
+    // Get current user's school_id first
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { set({ loading: false }); return }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('school_id')
+      .eq('id', user.id)
+      .single()
+
+    if (!profile?.school_id) { set({ loading: false }); return }
+
+    // Only fetch invitations for THIS school
     const { data, error } = await supabase
       .from('invitations')
       .select('*')
+      .eq('school_id', profile.school_id)
       .order('created_at', { ascending: false })
 
     if (error) { set({ error: error.message, loading: false }); return }
@@ -53,11 +68,9 @@ export const useInvitationStore = create<InvitationState>((set, get) => ({
       return false
     }
 
-    // Email sent fine
     if (!data.emailError) {
       set({ success: `Invitation sent to ${payload.email}`, sending: false })
     } else {
-      // Invitation created but email failed — show the invite URL so admin can share manually
       set({
         success:   `Invitation created for ${payload.email} (email failed — share the link below)`,
         inviteUrl: data.inviteUrl,
