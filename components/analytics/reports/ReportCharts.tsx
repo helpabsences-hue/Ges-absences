@@ -57,10 +57,10 @@ export function ReportCharts({ loading, groupStats, reasonData, barTitle, pieTit
           {loading ? <SkeletonBlock /> : reasonData.length === 0 ? (
             <p className="text-center text-slate-500 py-16 text-sm">{noAbsence}</p>
           ) : (
-            <ResponsiveContainer width="100%" height={280}>
+            <ResponsiveContainer width="100%" height={240}>
               <PieChart>
                 <Pie data={reasonData} cx="50%" cy="50%" outerRadius={85} innerRadius={40} dataKey="value"
-                  label={({ percent }) => percent > 0.05 ? `${(percent*100).toFixed(0)}%` : ''} labelLine={false}>
+                  label={({ percent }) => (percent ?? 0) > 0.05 ? `${((percent ?? 0)*100).toFixed(0)}%` : ''} labelLine={false}>
                   {reasonData.map((e, i) => <Cell key={i} fill={e.fill} />)}
                 </Pie>
                 <Tooltip content={<CustomTooltip />} />
