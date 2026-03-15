@@ -97,7 +97,7 @@ export default function LoginPage() {
           <div className={`inline-flex items-center gap-2 mb-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
             <LogoIcon className="w-10 h-10" />
             <span className="text-2xl font-bold text-slate-50 tracking-tight">
-              Attend<span className="text-blue-400">ify</span>
+              Attend<span className="text-blue-400">efy</span>
             </span>
           </div>
           <p className="text-slate-400 text-sm">{ui.tagline}</p>
@@ -109,7 +109,7 @@ export default function LoginPage() {
 
             {/* Email */}
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">
+              <label className="block text-sm font-medium text-slate-600 mb-1.5">
                 {ui.emailLabel}
               </label>
               <input
@@ -124,7 +124,7 @@ export default function LoginPage() {
 
             {/* Password */}
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">
+              <label className="block text-sm font-medium text-slate-600  mb-1.5">
                 {ui.passwordLabel}
               </label>
               <div className="relative">

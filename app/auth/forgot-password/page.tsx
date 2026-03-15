@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useSettingsStore } from '@/stores/useSettingsStore'
+import { LogoIcon } from '@/components/shared/LogoIcon'
 
 type Lang = 'fr' | 'en' | 'ar'
 
@@ -55,16 +56,16 @@ const UI: Record<Lang, {
 }
 
 export default function ForgotPasswordPage() {
-  const { language }   = useSettingsStore()
-  const searchParams   = useSearchParams()
-  const lang  = (language || 'fr') as Lang
-  const ui    = UI[lang]
+  const { language } = useSettingsStore()
+  const searchParams = useSearchParams()
+  const lang = (language || 'fr') as Lang
+  const ui = UI[lang]
   const isRtl = lang === 'ar'
 
-  const [email,   setEmail]   = useState('')
+  const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
-  const [sent,    setSent]    = useState(false)
-  const [error,   setError]   = useState('')
+  const [sent, setSent] = useState(false)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     if (searchParams.get('error') === 'link_expired') {
@@ -106,14 +107,14 @@ export default function ForgotPasswordPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <div className={`inline-flex items-center gap-2.5 mb-4 ${isRtl ? 'flex-row-reverse' : ''}`}>
-            <div className="w-10 h-10 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-600/30">
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-              </svg>
-            </div>
+           
+              <div className="p-1">
+                {/* Use the SVG Component here */}
+                <LogoIcon className="w-9 h-9" />
+              </div>
+            
             <span className="text-2xl font-bold text-white tracking-tight">
-              Attend<span className="text-blue-400">ify</span>
+              Attend<span className="text-blue-400">efy</span>
             </span>
           </div>
           <h1 className="text-xl font-semibold text-white">{ui.title}</h1>
