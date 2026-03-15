@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { LogoIcon } from '@/components/shared/LogoIcon'
+
 export default function TeacherShell({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const { profile, fetchProfile, signOut } = useAuthStore()
@@ -24,11 +25,11 @@ export default function TeacherShell({ children }: { children: React.ReactNode }
       <header className="h-16 bg-slate-900 border-b border-slate-800 px-6 flex items-center justify-between shrink-0">
 
         {/* Logo */}
-        <div className="flex items-center gap-3">
-            <div className="p-1">
-              {/* Use the SVG Component here */}
-              <LogoIcon className="w-10 h-10" />
-            </div>
+        <div className="flex items-center gap-1">
+          <div className="p-1">
+            {/* Use the SVG Component here */}
+            <LogoIcon className="w-9 h-9" />
+          </div>
           <div>
             <span className="text-base font-bold text-white tracking-tight">
               Attend<span className="text-blue-400">ify</span>
@@ -44,8 +45,8 @@ export default function TeacherShell({ children }: { children: React.ReactNode }
           <div className="flex items-center gap-2">
 
             {/* Settings icon */}
-            <Link href="/dashboard/settings"
-              className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition-all"
+            <Link href="/teacher/settings"
+              className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-blue-800 transition-all"
               title="Settings">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}

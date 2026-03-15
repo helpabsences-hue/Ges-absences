@@ -1,38 +1,17 @@
 'use client'
-// app/dashboard/reports/page.tsx
+// app/dashboard/reports/page.tsx — lean orchestrator (~120 lines)
 
 import { useEffect, useState, useCallback } from 'react'
 import { createClient }     from '@/lib/supabase/client'
 import { useGroupStore }    from '@/stores/useGroupStore'
 import { useSettingsStore } from '@/stores/useSettingsStore'
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, PieChart, Pie, Cell, Legend,
-} from 'recharts'
-import { Download } from 'lucide-react'
 
-type Lang = 'fr' | 'en' | 'ar'
+import { type Lang, type MainTab, type StatTab, type FilterType, type GroupStat, type StudentStat, type AbsenceRow, PIE_COLORS, parseTime, fmtHours } from '@/components/analytics/reports/types'
+import { ReportCharts }       from '@/components/analytics/reports/ReportCharts'
+import { ReportStatsTables }  from '@/components/analytics/reports/ReportStatsTables'
+import { ReportDetailsTable } from '@/components/analytics/reports/ReportDetailsTable'
 
-// ── Translations ─────────────────────────────────────────
-const UI: Record<Lang, {
-  title: string; subtitle: string
-  dateFrom: string; dateTo: string; group: string; allGroups: string
-  sessions: string; present: string; absent: string; late: string
-  tabStats: string; tabDetails: string
-  barTitle: string; pieTitle: string; noData: string; noAbsence: string
-  byGroup: string; byStudent: string
-  colGroup: string; colPresent: string; colLate: string; colAbsent: string; colRate: string
-  colStudent: string; colClass: string; colCourse: string; colDate: string
-  colType: string; colReason: string; colState: string
-  atRisk: string; records: string
-  allFilter: string; absentsFilter: string; latesFilter: string
-  exportPdf: string
-  noRecords: string; adjustFilters: string
-  justified: string; notJustified: string
-  absentBadge: string; lateBadge: string
-  pdfTitle: string; pdfPeriod: string; allGroupsPdf: string; filteredGroup: string
-  generatedOn: string
-}> = {
+const UI: Record<Lang, Record<string, string>> = {
   fr: {
     title: 'Rapports Détaillés', subtitle: "Analyses approfondies et statistiques d'assiduité",
     dateFrom: 'Date de début', dateTo: 'Date de fin', group: 'Groupe', allGroups: 'Tous les groupes',
@@ -41,18 +20,15 @@ const UI: Record<Lang, {
     barTitle: 'Assiduité par Classe', pieTitle: 'Raisons des Absences',
     noData: 'Aucune donnée', noAbsence: 'Aucune absence',
     byGroup: 'Par Groupe', byStudent: 'Par Étudiant',
-    colGroup: 'Groupe', colPresent: 'Présents', colLate: 'Retards', colAbsent: 'Absents', colRate: 'Taux',
+    colGroup: 'Groupe', colPresent: 'Présents', colLate: 'Retards', colAbsent: 'Absents', colHours: 'Heures abs.', colRate: 'Taux',
     colStudent: 'Étudiant', colClass: 'Classe', colCourse: 'Cours', colDate: 'Date / Séance',
     colType: 'Type', colReason: 'Raison', colState: 'État',
-    atRisk: 'À risque', records: 'relevés',
+    atRisk: 'À risque', records: 'relevés', hours: 'h',
     allFilter: 'Toutes', absentsFilter: 'Absences', latesFilter: 'Retards',
-    exportPdf: 'Télécharger CSV',
-    noRecords: 'Aucun enregistrement', adjustFilters: 'Essayez d\'ajuster les filtres',
+    exportCsv: 'Télécharger CSV',
+    noRecords: 'Aucun enregistrement', adjustFilters: "Essayez d'ajuster les filtres",
     justified: 'Justifiée', notJustified: 'Non justifiée',
     absentBadge: 'Absent', lateBadge: 'Retard',
-    pdfTitle: 'Rapport d\'Absences Détaillé',
-    pdfPeriod: 'Période', allGroupsPdf: 'Tous les groupes', filteredGroup: 'Groupe filtré',
-    generatedOn: 'Généré le',
   },
   en: {
     title: 'Detailed Reports', subtitle: 'In-depth analysis and attendance statistics',
@@ -62,18 +38,15 @@ const UI: Record<Lang, {
     barTitle: 'Attendance by Class', pieTitle: 'Absence Reasons',
     noData: 'No data', noAbsence: 'No absences',
     byGroup: 'By Group', byStudent: 'By Student',
-    colGroup: 'Group', colPresent: 'Present', colLate: 'Late', colAbsent: 'Absent', colRate: 'Rate',
+    colGroup: 'Group', colPresent: 'Present', colLate: 'Late', colAbsent: 'Absent', colHours: 'Abs. hours', colRate: 'Rate',
     colStudent: 'Student', colClass: 'Class', colCourse: 'Course', colDate: 'Date / Session',
     colType: 'Type', colReason: 'Reason', colState: 'State',
-    atRisk: 'At risk', records: 'records',
+    atRisk: 'At risk', records: 'records', hours: 'h',
     allFilter: 'All', absentsFilter: 'Absences', latesFilter: 'Lates',
-    exportPdf: 'Download CSV',
+    exportCsv: 'Download CSV',
     noRecords: 'No records', adjustFilters: 'Try adjusting your filters',
     justified: 'Justified', notJustified: 'Not justified',
     absentBadge: 'Absent', lateBadge: 'Late',
-    pdfTitle: 'Detailed Absence Report',
-    pdfPeriod: 'Period', allGroupsPdf: 'All groups', filteredGroup: 'Filtered group',
-    generatedOn: 'Generated on',
   },
   ar: {
     title: 'التقارير التفصيلية', subtitle: 'تحليل معمّق وإحصائيات الحضور',
@@ -83,73 +56,24 @@ const UI: Record<Lang, {
     barTitle: 'الحضور حسب الفصل', pieTitle: 'أسباب الغياب',
     noData: 'لا توجد بيانات', noAbsence: 'لا توجد غيابات',
     byGroup: 'حسب الفصل', byStudent: 'حسب الطالب',
-    colGroup: 'الفصل', colPresent: 'حاضر', colLate: 'متأخر', colAbsent: 'غائب', colRate: 'النسبة',
+    colGroup: 'الفصل', colPresent: 'حاضر', colLate: 'متأخر', colAbsent: 'غائب', colHours: 'ساعات غياب', colRate: 'النسبة',
     colStudent: 'الطالب', colClass: 'الفصل', colCourse: 'المادة', colDate: 'التاريخ / الحصة',
     colType: 'النوع', colReason: 'السبب', colState: 'الحالة',
-    atRisk: 'في خطر', records: 'سجلات',
+    atRisk: 'في خطر', records: 'سجلات', hours: 'س',
     allFilter: 'الكل', absentsFilter: 'الغيابات', latesFilter: 'التأخيرات',
-    exportPdf: 'تنزيل CSV',
+    exportCsv: 'تنزيل CSV',
     noRecords: 'لا توجد سجلات', adjustFilters: 'جرّب تعديل الفلاتر',
     justified: 'مبرّر', notJustified: 'غير مبرّر',
     absentBadge: 'غائب', lateBadge: 'متأخر',
-    pdfTitle: 'تقرير الغيابات التفصيلي',
-    pdfPeriod: 'الفترة', allGroupsPdf: 'جميع الفصول', filteredGroup: 'فصل محدد',
-    generatedOn: 'تم الإنشاء في',
   },
 }
 
-// ── Types ────────────────────────────────────────────────
-interface GroupStat   { group_id: string; group_name: string; year: number; total: number; present: number; absent: number; late: number; rate: number }
-interface StudentStat { student_id: string; student_name: string; massar_code: string; group_name: string; total: number; present: number; absent: number; late: number; rate: number }
-interface AbsenceRow  { id: string; studentName: string; massarCode: string; groupName: string; courseName: string; date: string; timeSlot: string; status: 'absent' | 'late'; reason: string; justified: boolean }
-
-type MainTab    = 'charts' | 'details'
-type StatTab    = 'group' | 'student'
-type FilterType = 'all' | 'absent' | 'late'
-
-const PIE_COLORS = ['#3b82f6','#22c55e','#f59e0b','#ef4444','#8b5cf6','#06b6d4']
-
-function rateColor(r: number) { return r >= 85 ? 'text-green-400' : r >= 70 ? 'text-yellow-400' : 'text-red-400' }
-function rateBg(r: number)    { return r >= 85 ? 'bg-green-500'   : r >= 70 ? 'bg-yellow-500'   : 'bg-red-500'   }
-
-function RateBar({ rate }: { rate: number }) {
-  return (
-    <div className="flex items-center gap-2">
-      <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
-        <div className={`h-full rounded-full ${rateBg(rate)}`} style={{ width: `${rate}%` }} />
-      </div>
-      <span className={`text-xs font-semibold w-10 text-right ${rateColor(rate)}`}>{rate}%</span>
-    </div>
-  )
-}
-
-function CustomTooltip({ active, payload, label, assiduiteLabel }: any) {
-  if (!active || !payload?.length) return null
-  return (
-    <div className="bg-slate-900 border border-slate-700 rounded-xl shadow-lg px-4 py-3 text-sm">
-      {label && <p className="font-semibold text-white mb-1">{label}</p>}
-      {payload.map((p: any) => (
-        <div key={p.name} className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full" style={{ background: p.color ?? p.fill }} />
-          <span className="text-slate-400">{p.name}:</span>
-          <span className="font-semibold text-white">{p.value}{p.name === assiduiteLabel ? '%' : ''}</span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function SkeletonBlock() {
-  return <div className="animate-pulse bg-slate-800 rounded-xl h-[260px]" />
-}
-
-// ── Main ────────────────────────────────────────────────
 export default function ReportsPage() {
   const { groups, fetchGroups } = useGroupStore()
   const { language }            = useSettingsStore()
-  const lang   = (language || 'fr') as Lang
-  const ui     = UI[lang]
-  const isRtl  = lang === 'ar'
+  const lang       = (language || 'fr') as Lang
+  const ui         = UI[lang]
+  const isRtl      = lang === 'ar'
   const dateLocale = lang === 'ar' ? 'ar-MA' : lang === 'en' ? 'en-GB' : 'fr-FR'
 
   const [dateFrom,      setDateFrom]      = useState(() => { const d = new Date(); d.setDate(d.getDate()-30); return d.toISOString().split('T')[0] })
@@ -162,7 +86,7 @@ export default function ReportsPage() {
   const [studentStats,  setStudentStats]  = useState<StudentStat[]>([])
   const [reasonData,    setReasonData]    = useState<{ name: string; value: number; fill: string }[]>([])
   const [absenceRows,   setAbsenceRows]   = useState<AbsenceRow[]>([])
-  const [totals,        setTotals]        = useState({ sessions: 0, records: 0, present: 0, absent: 0, late: 0 })
+  const [totals,        setTotals]        = useState({ sessions: 0, present: 0, absent: 0, late: 0 })
   const [loading,       setLoading]       = useState(false)
 
   useEffect(() => { fetchGroups() }, [fetchGroups])
@@ -181,39 +105,50 @@ export default function ReportsPage() {
       .lte('class_sessions.session_date', dateTo)
 
     if (!rows) { setLoading(false); return }
+
     const valid    = rows.filter((r: any) => r.class_sessions?.session_date)
-    const filtered = selectedGroup ? valid.filter((r: any) => r.class_sessions?.teacher_planning?.group_id === selectedGroup) : valid
+    const filtered = selectedGroup
+      ? valid.filter((r: any) => r.class_sessions?.teacher_planning?.group_id === selectedGroup)
+      : valid
+
+    const getDuration = (r: any) => {
+      const tp = r.class_sessions?.teacher_planning
+      if (!tp?.start_time || !tp?.end_time) return 0
+      return Math.max(0, parseTime(tp.end_time) - parseTime(tp.start_time))
+    }
 
     setTotals({
       sessions: new Set(valid.map((r: any) => r.class_sessions?.session_date)).size,
-      records:  filtered.length,
       present:  filtered.filter((r: any) => r.status === 'present').length,
       absent:   filtered.filter((r: any) => r.status === 'absent').length,
       late:     filtered.filter((r: any) => r.status === 'late').length,
     })
 
+    // Group stats
     const gMap: Record<string, GroupStat> = {}
     valid.forEach((r: any) => {
       const g = r.class_sessions?.teacher_planning?.groups; if (!g) return
-      if (!gMap[g.id]) gMap[g.id] = { group_id: g.id, group_name: g.name, year: g.year, total: 0, present: 0, absent: 0, late: 0, rate: 0 }
+      if (!gMap[g.id]) gMap[g.id] = { group_id: g.id, group_name: g.name, year: g.year, total: 0, present: 0, absent: 0, late: 0, rate: 0, absenceMinutes: 0 }
       gMap[g.id].total++
       if (r.status === 'present') gMap[g.id].present++
-      if (r.status === 'absent')  gMap[g.id].absent++
-      if (r.status === 'late')    gMap[g.id].late++
+      if (r.status === 'absent')  { gMap[g.id].absent++;  gMap[g.id].absenceMinutes += getDuration(r) }
+      if (r.status === 'late')    { gMap[g.id].late++;    gMap[g.id].absenceMinutes += Math.round(getDuration(r) / 2) }
     })
     setGroupStats(Object.values(gMap).map(g => ({ ...g, rate: g.total > 0 ? Math.round(((g.present+g.late)/g.total)*100) : 0 })).sort((a,b) => a.rate-b.rate))
 
+    // Student stats
     const sMap: Record<string, StudentStat> = {}
     filtered.forEach((r: any) => {
       const s = r.students; if (!s) return
-      if (!sMap[s.id]) sMap[s.id] = { student_id: s.id, student_name: s.name, massar_code: s.massar_code, group_name: s.groups?.name ?? '—', total: 0, present: 0, absent: 0, late: 0, rate: 0 }
+      if (!sMap[s.id]) sMap[s.id] = { student_id: s.id, student_name: s.name, massar_code: s.massar_code, group_name: s.groups?.name ?? '—', total: 0, present: 0, absent: 0, late: 0, rate: 0, absenceMinutes: 0 }
       sMap[s.id].total++
       if (r.status === 'present') sMap[s.id].present++
-      if (r.status === 'absent')  sMap[s.id].absent++
-      if (r.status === 'late')    sMap[s.id].late++
+      if (r.status === 'absent')  { sMap[s.id].absent++;  sMap[s.id].absenceMinutes += getDuration(r) }
+      if (r.status === 'late')    { sMap[s.id].late++;    sMap[s.id].absenceMinutes += Math.round(getDuration(r) / 2) }
     })
     setStudentStats(Object.values(sMap).map(s => ({ ...s, rate: s.total > 0 ? Math.round(((s.present+s.late)/s.total)*100) : 0 })).sort((a,b) => a.rate-b.rate))
 
+    // Reasons pie
     const rMap: Record<string, number> = {}
     filtered.filter((r: any) => r.status === 'absent').forEach((r: any) => {
       const key = r.reason?.trim() || 'Non spécifié'
@@ -221,6 +156,7 @@ export default function ReportsPage() {
     })
     setReasonData(Object.entries(rMap).map(([name, value], i) => ({ name, value, fill: PIE_COLORS[i % PIE_COLORS.length] })))
 
+    // Absence rows
     setAbsenceRows(
       filtered.filter((r: any) => r.status === 'absent' || r.status === 'late')
         .map((r: any) => {
@@ -231,6 +167,7 @@ export default function ReportsPage() {
             courseName: tp?.courses?.name ?? '—', date: r.class_sessions.session_date,
             timeSlot: tp?.start_time && tp?.end_time ? `${tp.start_time.slice(0,5)}–${tp.end_time.slice(0,5)}` : '—',
             status: r.status, reason: r.reason?.trim() || '', justified: !!r.reason?.trim(),
+            durationMinutes: getDuration(r),
           }
         }).sort((a, b) => b.date.localeCompare(a.date))
     )
@@ -241,36 +178,24 @@ export default function ReportsPage() {
 
   const filteredAbsences = absenceRows.filter(r => filterType === 'all' || r.status === filterType)
 
-  // ── Export CSV (zero-dependency, works without npm install) ──
-  // To upgrade to PDF: npm install jspdf jspdf-autotable
-  const handleExportPDF = () => {
+  const handleExportCsv = () => {
     const esc = (v: string) => `"${String(v).replace(/"/g, '""')}"`
-
-    const headers = [
-      ui.colStudent, 'Massar', ui.colClass, ui.colCourse,
-      ui.colDate, ui.colType, ui.colReason, ui.colState,
-    ].map(esc).join(',')
-
+    const headers = [ui.colStudent, 'Massar', ui.colClass, ui.colCourse, ui.colDate, ui.colType, ui.colReason, ui.colState, ui.colHours].map(esc).join(',')
     const rowLines = filteredAbsences.map(r => [
       r.studentName, r.massarCode, r.groupName, r.courseName,
-      `${new Date(r.date).toLocaleDateString(dateLocale, { day: 'numeric', month: 'short', year: 'numeric' })} ${r.timeSlot}`,
+      `${new Date(r.date).toLocaleDateString(dateLocale, { day:'numeric', month:'short', year:'numeric' })} ${r.timeSlot}`,
       r.status === 'absent' ? ui.absentBadge : ui.lateBadge,
-      r.reason || '—',
-      r.justified ? ui.justified : ui.notJustified,
+      r.reason || '—', r.justified ? ui.justified : ui.notJustified,
+      fmtHours(r.durationMinutes, ui.hours),
     ].map(esc).join(','))
-
-    // BOM prefix so Excel opens UTF-8 correctly
     const csv  = '\uFEFF' + [headers, ...rowLines].join('\r\n')
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
     const url  = URL.createObjectURL(blob)
     const a    = document.createElement('a')
-    a.href     = url
-    a.download = `rapport-absences-${dateFrom}-${dateTo}.csv`
-    a.click()
+    a.href = url; a.download = `rapport-absences-${dateFrom}-${dateTo}.csv`; a.click()
     URL.revokeObjectURL(url)
   }
 
-  // ── Render ──────────────────────────────────────────
   return (
     <div className={`max-w-6xl mx-auto space-y-4 sm:space-y-6 ${isRtl ? 'text-right' : ''}`}>
 
@@ -333,7 +258,10 @@ export default function ReportsPage() {
 
       {/* Main tabs */}
       <div className={`flex gap-1 bg-slate-900 border border-slate-800 rounded-xl p-1 w-fit ${isRtl ? 'flex-row-reverse' : ''}`}>
-        {([{ key: 'charts', label: ui.tabStats }, { key: 'details', label: ui.tabDetails }] as { key: MainTab; label: string }[]).map(({ key, label }) => (
+        {([
+          { key: 'charts'  as MainTab, label: ui.tabStats   },
+          { key: 'details' as MainTab, label: ui.tabDetails },
+        ]).map(({ key, label }) => (
           <button key={key} onClick={() => setMainTab(key)}
             className={`px-4 sm:px-5 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap
               ${mainTab === key ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}>
@@ -342,238 +270,42 @@ export default function ReportsPage() {
         ))}
       </div>
 
-      {/* ── STATS TAB ────────────────────────────────── */}
+      {/* Stats tab */}
       {mainTab === 'charts' && (
         <div className="space-y-4 sm:space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-            {/* Bar chart */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
-              <div className="px-4 sm:px-6 py-4 border-b border-slate-800">
-                <h3 className="text-sm font-semibold text-white">{ui.barTitle}</h3>
-              </div>
-              <div className="p-4 sm:p-6">
-                {loading ? <SkeletonBlock /> : groupStats.length === 0 ? (
-                  <p className="text-center text-slate-500 py-16 text-sm">{ui.noData}</p>
-                ) : (
-                  <ResponsiveContainer width="100%" height={240}>
-                    <BarChart data={groupStats.map(g => ({ class: g.group_name, [ui.colRate]: g.rate }))} margin={{ top: 4, right: 4, left: -10, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border,#1e293b)" vertical={false} />
-                      <XAxis dataKey="class" tick={{ fontSize: 11, fill: 'var(--color-muted-foreground,#94a3b8)' }} axisLine={false} tickLine={false} />
-                      <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: 'var(--color-muted-foreground,#94a3b8)' }} axisLine={false} tickLine={false} tickFormatter={v => `${v}%`} />
-                      <Tooltip content={<CustomTooltip assiduiteLabel={ui.colRate} />} />
-                      <Bar dataKey={ui.colRate} fill="#3b82f6" radius={[6,6,0,0]} maxBarSize={40} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                )}
-              </div>
-            </div>
-
-            {/* Pie chart */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
-              <div className="px-4 sm:px-6 py-4 border-b border-slate-800">
-                <h3 className="text-sm font-semibold text-white">{ui.pieTitle}</h3>
-              </div>
-              <div className="p-4 sm:p-6">
-                {loading ? <SkeletonBlock /> : reasonData.length === 0 ? (
-                  <p className="text-center text-slate-500 py-16 text-sm">{ui.noAbsence}</p>
-                ) : (
-                  <ResponsiveContainer width="100%" height={240}>
-                    <PieChart>
-                      <Pie data={reasonData} cx="50%" cy="50%" outerRadius={85} innerRadius={40} dataKey="value"
-                        label={({ percent }) => percent > 0.05 ? `${(percent*100).toFixed(0)}%` : ''} labelLine={false}>
-                        {reasonData.map((e, i) => <Cell key={i} fill={e.fill} />)}
-                      </Pie>
-                      <Tooltip content={<CustomTooltip />} />
-                      <Legend formatter={v => <span className="text-xs text-slate-400">{v}</span>} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Sub-tabs */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
-            <div className={`px-4 sm:px-5 py-3 border-b border-slate-800 flex items-center gap-1 ${isRtl ? 'flex-row-reverse' : ''}`}>
-              {([{ key: 'group', label: ui.byGroup }, { key: 'student', label: ui.byStudent }] as { key: StatTab; label: string }[]).map(({ key, label }) => (
-                <button key={key} onClick={() => setStatTab(key)}
-                  className={`px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all
-                    ${statTab === key ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
-                  {label}
-                </button>
-              ))}
-            </div>
-
-            {loading ? (
-              <div className="p-6"><SkeletonBlock /></div>
-            ) : statTab === 'group' ? (
-              groupStats.length === 0 ? <p className="text-center text-slate-500 py-12 text-sm">{ui.noData}</p> : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-slate-800">
-                        {[ui.colGroup, ui.colPresent, ui.colLate, ui.colAbsent, ui.colRate].map((h, i) => (
-                          <th key={h} className={`px-4 sm:px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider
-                            ${i === 0 || i === 4 ? (isRtl ? 'text-right' : 'text-left') : 'text-right'}`}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-800">
-                      {groupStats.map(g => (
-                        <tr key={g.group_id} className="hover:bg-slate-800/40 transition">
-                          <td className="px-4 sm:px-5 py-4">
-                            <p className="text-sm font-semibold text-white">{g.group_name}</p>
-                            <p className="text-xs text-slate-500">{g.year} · {g.total} {ui.records}</p>
-                          </td>
-                          <td className="px-4 sm:px-5 py-4 text-right"><span className="text-sm font-medium text-green-400">{g.present}</span></td>
-                          <td className="px-4 sm:px-5 py-4 text-right"><span className="text-sm font-medium text-yellow-400">{g.late}</span></td>
-                          <td className="px-4 sm:px-5 py-4 text-right"><span className="text-sm font-medium text-red-400">{g.absent}</span></td>
-                          <td className="px-4 sm:px-5 py-4 w-40"><RateBar rate={g.rate} /></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )
-            ) : (
-              studentStats.length === 0 ? <p className="text-center text-slate-500 py-12 text-sm">{ui.noData}</p> : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-slate-800">
-                        {[ui.colStudent, ui.colClass, ui.colPresent, ui.colLate, ui.colAbsent, ui.colRate].map((h, i) => (
-                          <th key={h} className={`px-4 sm:px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider
-                            ${i <= 1 || i === 5 ? (isRtl ? 'text-right' : 'text-left') : 'text-right'}`}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-800">
-                      {studentStats.map(s => (
-                        <tr key={s.student_id} className="hover:bg-slate-800/40 transition">
-                          <td className="px-4 sm:px-5 py-4">
-                            <div className={`flex items-center gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
-                              <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0
-                                ${s.rate < 70 ? 'bg-red-500/20 border border-red-500/30' : 'bg-slate-800'}`}>
-                                <span className={`text-xs font-bold ${s.rate < 70 ? 'text-red-400' : 'text-slate-300'}`}>
-                                  {s.student_name.charAt(0).toUpperCase()}
-                                </span>
-                              </div>
-                              <div>
-                                <p className="text-sm font-medium text-white">{s.student_name}</p>
-                                <p className="text-xs text-slate-500 font-mono">{s.massar_code}</p>
-                              </div>
-                              {s.rate < 70 && <span className="text-xs bg-red-500/10 text-red-400 border border-red-500/20 px-1.5 py-0.5 rounded-md shrink-0">{ui.atRisk}</span>}
-                            </div>
-                          </td>
-                          <td className="px-4 sm:px-5 py-4 text-sm text-slate-400">{s.group_name}</td>
-                          <td className="px-4 sm:px-5 py-4 text-right"><span className="text-sm font-medium text-green-400">{s.present}</span></td>
-                          <td className="px-4 sm:px-5 py-4 text-right"><span className="text-sm font-medium text-yellow-400">{s.late}</span></td>
-                          <td className="px-4 sm:px-5 py-4 text-right"><span className="text-sm font-medium text-red-400">{s.absent}</span></td>
-                          <td className="px-4 sm:px-5 py-4 w-40"><RateBar rate={s.rate} /></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )
-            )}
-          </div>
+          <ReportCharts
+            loading={loading} groupStats={groupStats} reasonData={reasonData}
+            barTitle={ui.barTitle} pieTitle={ui.pieTitle}
+            noData={ui.noData} noAbsence={ui.noAbsence} rateLabel={ui.colRate}
+          />
+          <ReportStatsTables
+            loading={loading} statTab={statTab} setStatTab={setStatTab}
+            groupStats={groupStats} studentStats={studentStats} isRtl={isRtl}
+            labels={{ byGroup: ui.byGroup, byStudent: ui.byStudent, colGroup: ui.colGroup,
+              colPresent: ui.colPresent, colLate: ui.colLate, colAbsent: ui.colAbsent,
+              colHours: ui.colHours, colRate: ui.colRate, colStudent: ui.colStudent,
+              colClass: ui.colClass, atRisk: ui.atRisk, records: ui.records,
+              hours: ui.hours, noData: ui.noData }}
+          />
         </div>
       )}
 
-      {/* ── DETAILS TAB ──────────────────────────────── */}
+      {/* Details tab */}
       {mainTab === 'details' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
-          <div className={`px-4 sm:px-5 py-4 border-b border-slate-800 flex items-center justify-between gap-3 flex-wrap
-            ${isRtl ? 'flex-row-reverse' : ''}`}>
-            <div className={`flex items-center gap-1.5 sm:gap-2 flex-wrap ${isRtl ? 'flex-row-reverse' : ''}`}>
-              {([
-                { key: 'all',    label: `${ui.allFilter} (${absenceRows.length})`                                        },
-                { key: 'absent', label: `${ui.absentsFilter} (${absenceRows.filter(r => r.status==='absent').length})`  },
-                { key: 'late',   label: `${ui.latesFilter} (${absenceRows.filter(r => r.status==='late').length})`      },
-              ] as { key: FilterType; label: string }[]).map(({ key, label }) => (
-                <button key={key} onClick={() => setFilterType(key)}
-                  className={`text-xs font-medium px-2.5 sm:px-3 py-1.5 rounded-lg transition
-                    ${filterType === key ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-white'}`}>
-                  {label}
-                </button>
-              ))}
-            </div>
-            <button onClick={handleExportPDF}
-              className={`flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700
-                text-slate-300 hover:text-white text-sm font-medium px-3 sm:px-4 py-2 rounded-xl transition shrink-0
-                ${isRtl ? 'flex-row-reverse' : ''}`}>
-              <Download className="w-4 h-4 shrink-0" />
-              {ui.exportPdf}
-            </button>
-          </div>
-
-          {loading ? (
-            <div className="p-6"><SkeletonBlock /></div>
-          ) : filteredAbsences.length === 0 ? (
-            <div className="py-16 text-center">
-              <p className="text-slate-400 font-medium">{ui.noRecords}</p>
-              <p className="text-slate-600 text-sm mt-1">{ui.adjustFilters}</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-slate-800">
-                    {[ui.colStudent, ui.colClass, ui.colCourse, ui.colDate, ui.colType, ui.colReason, ui.colState].map(h => (
-                      <th key={h} className={`px-4 sm:px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap
-                        ${isRtl ? 'text-right' : 'text-left'}`}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredAbsences.map(r => (
-                    <tr key={r.id} className="border-b border-slate-800 hover:bg-slate-800/40 transition">
-                      <td className="px-4 sm:px-5 py-3">
-                        <p className="font-medium text-white">{r.studentName}</p>
-                        <p className="text-xs text-slate-500 font-mono">{r.massarCode}</p>
-                      </td>
-                      <td className="px-4 sm:px-5 py-3 text-slate-400 whitespace-nowrap">{r.groupName}</td>
-                      <td className="px-4 sm:px-5 py-3 text-slate-400 whitespace-nowrap">{r.courseName}</td>
-                      <td className="px-4 sm:px-5 py-3 text-slate-400 whitespace-nowrap">
-                        <p>{new Date(r.date).toLocaleDateString(dateLocale, { day:'numeric', month:'short', year:'numeric' })}</p>
-                        <p className="text-xs">{r.timeSlot}</p>
-                      </td>
-                      <td className="px-4 sm:px-5 py-3">
-                        <span className={`text-xs font-semibold px-2 py-1 rounded-lg
-                          ${r.status === 'absent' ? 'bg-red-500/10 text-red-400' : 'bg-yellow-500/10 text-yellow-400'}`}>
-                          {r.status === 'absent' ? ui.absentBadge : ui.lateBadge}
-                        </span>
-                      </td>
-                      <td className="px-4 sm:px-5 py-3 text-slate-500 text-xs max-w-[120px] truncate italic">{r.reason || '—'}</td>
-                      <td className="px-4 sm:px-5 py-3">
-                        <span className={`text-xs font-semibold px-2 py-1 rounded-lg
-                          ${r.justified ? 'bg-green-500/10 text-green-400' : 'bg-orange-500/10 text-orange-400'}`}>
-                          {r.justified ? ui.justified : ui.notJustified}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {filteredAbsences.length > 0 && (
-            <div className="grid grid-cols-3 gap-4 px-5 sm:px-6 py-4 border-t border-slate-800 text-center">
-              {[
-                { label: ui.justified,    value: filteredAbsences.filter(r => r.justified).length  },
-                { label: ui.notJustified, value: filteredAbsences.filter(r => !r.justified).length },
-                { label: 'Total',         value: filteredAbsences.length                           },
-              ].map(({ label, value }) => (
-                <div key={label}>
-                  <p className="text-xl sm:text-2xl font-bold text-white">{value}</p>
-                  <p className="text-xs text-slate-500 mt-0.5">{label}</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <ReportDetailsTable
+          loading={loading} absenceRows={absenceRows}
+          filteredAbsences={filteredAbsences} filterType={filterType}
+          setFilterType={setFilterType} onExport={handleExportCsv}
+          isRtl={isRtl} dateLocale={dateLocale}
+          labels={{ allFilter: ui.allFilter, absentsFilter: ui.absentsFilter,
+            latesFilter: ui.latesFilter, exportCsv: ui.exportCsv,
+            noRecords: ui.noRecords, adjustFilters: ui.adjustFilters,
+            colStudent: ui.colStudent, colClass: ui.colClass, colCourse: ui.colCourse,
+            colDate: ui.colDate, colType: ui.colType, colHours: ui.colHours,
+            colReason: ui.colReason, colState: ui.colState,
+            absentBadge: ui.absentBadge, lateBadge: ui.lateBadge,
+            justified: ui.justified, notJustified: ui.notJustified, hours: ui.hours }}
+        />
       )}
     </div>
   )
