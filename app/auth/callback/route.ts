@@ -1,6 +1,5 @@
 // app/auth/callback/route.ts
-// Supabase redirects here after email confirmation / password reset
-// This exchanges the code for a session then redirects to the right page
+export const dynamic = 'force-dynamic'
 
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
@@ -9,12 +8,11 @@ import { NextResponse, type NextRequest } from 'next/server'
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
 
-  const code  = searchParams.get('code')
-  const type  = searchParams.get('type')   // 'recovery' for password reset
-  const next  = searchParams.get('next') ?? '/'
+  const code = searchParams.get('code')
+  const type = searchParams.get('type') // 'recovery' for password reset
 
   if (code) {
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -22,9 +20,11 @@ export async function GET(request: NextRequest) {
         cookies: {
           getAll() { return cookieStore.getAll() },
           setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            )
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              )
+            } catch { /* called from Server Component */ }
           },
         },
       }
@@ -33,15 +33,15 @@ export async function GET(request: NextRequest) {
     const { error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (!error) {
-      // Password reset → go to reset page
       if (type === 'recovery') {
         return NextResponse.redirect(`${origin}/auth/reset-password`)
       }
-      // Other (invite, email confirm) → go to dashboard
-      return NextResponse.redirect(`${origin}${next}`)
+      return NextResponse.redirect(`${origin}/dashboard`)
     }
+
+    console.error('exchangeCodeForSession error:', error.message)
   }
 
-  // Something went wrong → back to login with error
-  return NextResponse.redirect(`${origin}/auth/login?error=invalid_link`)
+  // No code or exchange failed — back to forgot password with error hint
+  return NextResponse.redirect(`${origin}/auth/forgot-password?error=link_expired`)
 }
