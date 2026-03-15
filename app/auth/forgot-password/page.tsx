@@ -1,12 +1,11 @@
 'use client'
 export const dynamic = 'force-dynamic'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useSettingsStore } from '@/stores/useSettingsStore'
-import { LogoIcon } from '@/components/shared/LogoIcon'
 
 type Lang = 'fr' | 'en' | 'ar'
 
@@ -55,17 +54,17 @@ const UI: Record<Lang, {
   },
 }
 
-export default function ForgotPasswordPage() {
-  const { language } = useSettingsStore()
-  const searchParams = useSearchParams()
-  const lang = (language || 'fr') as Lang
-  const ui = UI[lang]
+function ForgotPasswordContent() {
+  const { language }   = useSettingsStore()
+  const searchParams   = useSearchParams()
+  const lang  = (language || 'fr') as Lang
+  const ui    = UI[lang]
   const isRtl = lang === 'ar'
 
-  const [email, setEmail] = useState('')
+  const [email,   setEmail]   = useState('')
   const [loading, setLoading] = useState(false)
-  const [sent, setSent] = useState(false)
-  const [error, setError] = useState('')
+  const [sent,    setSent]    = useState(false)
+  const [error,   setError]   = useState('')
 
   useEffect(() => {
     if (searchParams.get('error') === 'link_expired') {
@@ -107,14 +106,14 @@ export default function ForgotPasswordPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <div className={`inline-flex items-center gap-2.5 mb-4 ${isRtl ? 'flex-row-reverse' : ''}`}>
-           
-              <div className="p-1">
-                {/* Use the SVG Component here */}
-                <LogoIcon className="w-9 h-9" />
-              </div>
-            
+            <div className="w-10 h-10 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-600/30">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+              </svg>
+            </div>
             <span className="text-2xl font-bold text-white tracking-tight">
-              Attend<span className="text-blue-400">efy</span>
+              Attend<span className="text-blue-400">ify</span>
             </span>
           </div>
           <h1 className="text-xl font-semibold text-white">{ui.title}</h1>
@@ -242,5 +241,20 @@ export default function ForgotPasswordPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function ForgotPasswordPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <svg className="w-6 h-6 text-blue-400 animate-spin" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+        </svg>
+      </div>
+    }>
+      <ForgotPasswordContent />
+    </Suspense>
   )
 }
