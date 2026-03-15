@@ -350,7 +350,7 @@ export default function InvitationsPage() {
                             <span className="text-xs text-slate-400 mx-1">{ui.sure}</span>
                             <button
                               onClick={async () => { await deleteInvitation(inv.id); setConfirmDeleteId(null) }}
-                              className="text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 font-semibold px-2.5 sm:px-3 py-1.5 rounded-lg transition">
+                              className="text-xs bg-red-500/10 hover:bg-red-800 text-red-600 font-semibold px-2.5 sm:px-3 py-1.5 rounded-lg transition">
                               {ui.deleteBtn}
                             </button>
                             <button onClick={() => setConfirmDeleteId(null)}
