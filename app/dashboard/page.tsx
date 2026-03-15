@@ -1,4 +1,6 @@
 'use client'
+
+export const dynamic = 'force-dynamic'
 // app/dashboard/page.tsx
 
 import { AdminStats }       from '@/components/analytics/admin-stats'
@@ -20,10 +22,10 @@ export default function DashboardPage() {
 
       {/* Page header */}
       <div>
-        <h1 className="text-xl sm:text-2xl dark:text-white font-bold text-foreground">
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground">
           {TITLES[lang]}
         </h1>
-        <p className="text-xs sm:text-sm dark:text-white text-muted-foreground mt-1">
+        <p className="text-xs sm:text-sm text-muted-foreground mt-1">
           {DESCS[lang]}
         </p>
       </div>

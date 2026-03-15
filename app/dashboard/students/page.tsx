@@ -1,4 +1,6 @@
 'use client'
+
+export const dynamic = 'force-dynamic'
 // app/dashboard/students/page.tsx
 
 import { useEffect, useState } from 'react'

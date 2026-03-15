@@ -1,4 +1,6 @@
 'use client'
+
+export const dynamic = 'force-dynamic'
 // src/app/auth/register/page.tsx
 
 import { useState } from 'react'

@@ -1,4 +1,6 @@
 'use client'
+
+export const dynamic = 'force-dynamic'
 // src/app/auth/invite/page.tsx
 
 import { useState, useEffect, Suspense } from 'react'

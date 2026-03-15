@@ -1,4 +1,6 @@
 'use client'
+
+export const dynamic = 'force-dynamic'
 // app/teacher/settings/page.tsx
 // Same settings as admin — theme, language, account info
 

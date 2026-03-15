@@ -1,4 +1,6 @@
 'use client'
+
+export const dynamic = 'force-dynamic'
 // app/dashboard/reports/page.tsx — lean orchestrator (~120 lines)
 
 import { useEffect, useState, useCallback } from 'react'

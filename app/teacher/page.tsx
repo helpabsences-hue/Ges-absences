@@ -1,4 +1,6 @@
 'use client'
+
+export const dynamic = 'force-dynamic'
 // app/teacher/page.tsx
 
 import { useEffect, useState, useCallback } from 'react'
@@ -197,7 +199,7 @@ export default function TeacherPage() {
         rounded-2xl px-4 sm:px-6 py-4 sm:py-5 ${isRtl ? 'text-right' : ''}`}>
         <p className="text-slate-400 text-xs sm:text-sm capitalize">{dateStr}</p>
         <h1 className="text-lg sm:text-xl font-bold text-white mt-1">
-          {greeting}, {profile?.name?.split(' ')[0] ?? '...'}
+          {greeting}, {profile?.name?.split(' ')[0] ?? '...'} 👋
         </h1>
         <p className="text-slate-400 text-xs sm:text-sm mt-1">
           {todaySlots.length === 0
@@ -231,7 +233,7 @@ export default function TeacherPage() {
         ]).map(({ key, label, badge }) => (
           <button key={key} onClick={() => setTab(key)}
             className={`px-3 sm:px-5 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap
-              ${tab === key ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:bg-blue-300 hover:text-white'}`}>
+              ${tab === key ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}>
             {label}
             {badge !== null && (
               <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-full
