@@ -84,7 +84,12 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({
     success: true,
     token: invitation.token,                          // handy for manual sharing
-    inviteUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin}/auth/invite?token=${invitation.token}`,
+    inviteUrl: `${
+      process.env.NEXT_PUBLIC_APP_URL
+      ?? (request.headers.get('x-forwarded-host')
+        ? `${request.headers.get('x-forwarded-proto') ?? 'https'}://${request.headers.get('x-forwarded-host')}`
+        : 'https://attendeffy.vercel.app')
+    }/auth/invite?token=${invitation.token}`,
     emailError: emailError ?? null,                   // null = email sent fine
   })
 }

@@ -1,9 +1,9 @@
 // src/app/api/register/route.ts
 import { createServiceClient } from '@/lib/supabase/server'
-import { NextResponse } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
 import type { RegisterPayload } from '@/types'
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   const body: RegisterPayload = await request.json()
   const { schoolName, city, ownerName, email, password } = body
 
@@ -24,12 +24,18 @@ export async function POST(request: Request) {
   // Service role bypasses RLS for the full creation sequence
   const supabase = createServiceClient()
 
+  // ── Compute public base URL ───────────────────────────
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL
+  const fwdHost = request.headers.get('x-forwarded-host')
+  const fwdProto = request.headers.get('x-forwarded-proto') ?? 'https'
+  const baseUrl = appUrl ?? (fwdHost ? `${fwdProto}://${fwdHost}` : new URL(request.url).origin)
+
   // ── 1. Create auth user ────────────────────────────────
   const { data: authData, error: authError } =
     await supabase.auth.admin.createUser({
       email,
       password,
-      email_confirm: false,
+      email_confirm: true,   // auto-confirm, no email needed
       user_metadata: { name: ownerName },
     })
 

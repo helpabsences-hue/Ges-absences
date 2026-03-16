@@ -1,9 +1,10 @@
-// src/lib/email.ts
+// lib/email.ts
 
 const BREVO_API_KEY = process.env.BREVO_API_KEY!
-const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@attendify.app'
-const FROM_NAME = 'Attendify'
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+const FROM_EMAIL    = process.env.FROM_EMAIL || 'noreply@attendify.app'
+const FROM_NAME     = 'Attendify'
+// Never fall back to localhost — always use the real production URL
+const BASE_URL      = process.env.NEXT_PUBLIC_APP_URL || 'https://attendeffy.vercel.app'
 
 interface SendInviteParams {
   to: string
@@ -14,14 +15,10 @@ interface SendInviteParams {
 }
 
 export async function sendInvitationEmail({
-  to,
-  role,
-  schoolName,
-  token,
-  inviterName,
+  to, role, schoolName, token, inviterName,
 }: SendInviteParams): Promise<void> {
-  const inviteUrl = `${BASE_URL}/auth/invite?token=${token}`
-  const roleLabel = role === 'admin' ? 'Administrator' : 'Teacher'
+  const inviteUrl  = `${BASE_URL}/auth/invite?token=${token}`
+  const roleLabel  = role === 'admin' ? 'Administrator' : 'Teacher'
 
   const html = `
 <!DOCTYPE html>
@@ -78,9 +75,9 @@ export async function sendInvitationEmail({
       'api-key': BREVO_API_KEY,
     },
     body: JSON.stringify({
-      sender: { name: FROM_NAME, email: FROM_EMAIL },
-      to: [{ email: to }],
-      subject: `You're invited to join ${schoolName} on Attendify`,
+      sender:      { name: FROM_NAME, email: FROM_EMAIL },
+      to:          [{ email: to }],
+      subject:     `You're invited to join ${schoolName} on Attendify`,
       htmlContent: html,
     }),
   })
