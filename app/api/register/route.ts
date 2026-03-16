@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     await supabase.auth.admin.createUser({
       email,
       password,
-      email_confirm: true,   // auto-confirm, no email needed
+      email_confirm: false,  // Supabase sends confirmation email via custom SMTP
       user_metadata: { name: ownerName },
     })
 

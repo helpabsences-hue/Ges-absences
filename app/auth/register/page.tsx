@@ -21,6 +21,8 @@ export default function RegisterPage() {
   const [form, setForm] = useState<RegisterPayload>(INITIAL)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [sent, setSent] = useState(false)
+  const [sentEmail, setSentEmail] = useState('')
 
   const set = (field: keyof RegisterPayload) =>
     (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -45,8 +47,52 @@ export default function RegisterPage() {
       return
     }
 
-    // Success — go to login
-    router.push('/auth/login?registered=1')
+    // Success — show check email message
+    setSentEmail(form.email)
+    setSent(true)
+  }
+
+  if (sent) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex items-center justify-center p-4">
+        <div className="relative w-full max-w-md text-center">
+          <div className="inline-flex items-center gap-2 mb-8">
+            <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+              </svg>
+            </div>
+            <span className="text-2xl font-bold text-white tracking-tight">
+              Attend<span className="text-blue-400">ify</span>
+            </span>
+          </div>
+          <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl space-y-5">
+            <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto">
+              <svg className="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-white">Check your email</h2>
+              <p className="text-slate-400 text-sm mt-2">
+                We sent a confirmation link to
+              </p>
+              <p className="text-white font-semibold mt-1">{sentEmail}</p>
+            </div>
+            <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3 text-left">
+              <p className="text-xs text-amber-300">
+                Check your spam folder if you don&apos;t see it. Click the link to activate your account.
+              </p>
+            </div>
+            <Link href="/auth/login" className="inline-flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300 font-medium transition">
+              ← Go to login
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (

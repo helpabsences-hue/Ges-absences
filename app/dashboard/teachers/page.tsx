@@ -124,17 +124,19 @@ export default function TeachersPage() {
 
   const handleDelete = async (id: string) => {
     setDeletingId(id)
-    const supabase = createClient()
-    await supabase.from('teacher_planning').delete().eq('teacher_id', id)
-    await supabase.from('profiles').delete().eq('id', id)
-    await fetch('/api/delete-user', {
+    const res = await fetch('/api/delete-user', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId: id }),
     })
+    if (res.ok) {
+      setTeachers((prev) => prev.filter((t) => t.id !== id))
+    } else {
+      const data = await res.json()
+      console.error('Delete failed:', data.error)
+    }
     setDeletingId(null)
     setConfirmId(null)
-    setTeachers((prev) => prev.filter((t) => t.id !== id))
   }
 
   const filtered = teachers.filter((t) =>
