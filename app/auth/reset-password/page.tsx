@@ -1,7 +1,5 @@
 'use client'
-
 export const dynamic = 'force-dynamic'
-// app/auth/reset-password/page.tsx
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
@@ -16,8 +14,8 @@ const UI: Record<Lang, {
   newPassword: string; confirmPassword: string
   updateBtn: string; updating: string
   successTitle: string; successDesc: string; goToLogin: string
-  errRequired: string; errMatch: string; errMin: string
-  errExpired: string; show: string; hide: string
+  errRequired: string; errMatch: string; errMin: string; errExpired: string
+  show: string; hide: string
   strength: string; weak: string; fair: string; good: string; strong: string
   loading: string
 }> = {
@@ -59,7 +57,7 @@ const UI: Record<Lang, {
   },
 }
 
-function strength(p: string): 0|1|2|3|4 {
+function getStrength(p: string): 0|1|2|3|4 {
   if (!p) return 0
   let s = 0
   if (p.length >= 8) s++
@@ -68,6 +66,7 @@ function strength(p: string): 0|1|2|3|4 {
   if (/[0-9]/.test(p) && /[^A-Za-z0-9]/.test(p)) s++
   return Math.min(s, 4) as 0|1|2|3|4
 }
+
 const STRENGTH_COLOR = ['', 'bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-green-500']
 
 type PageState = 'loading' | 'ready' | 'expired' | 'done'
@@ -87,35 +86,38 @@ export default function ResetPasswordPage() {
   const [loading,   setLoading]   = useState(false)
   const [error,     setError]     = useState('')
 
-  const pwdStrength = strength(password)
+  const pwdStrength   = getStrength(password)
   const strengthLabel = ['', ui.weak, ui.fair, ui.good, ui.strong][pwdStrength]
 
   useEffect(() => {
-    // Supabase puts tokens in the URL hash: #access_token=...&type=recovery
-    // We need to let Supabase process the hash and establish a session
     const supabase = createClient()
 
+    // ── Key fix: exchange the full URL (contains the code in hash or query) ──
+    supabase.auth.exchangeCodeForSession(window.location.href)
+      .then(({ error }) => {
+        if (error) {
+          console.error('exchangeCodeForSession error:', error.message)
+        }
+      })
+
+    // Listen for PASSWORD_RECOVERY event — fires after code is exchanged
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY' && session) {
-        // Token exchanged successfully — show the form
         setPageState('ready')
       } else if (event === 'SIGNED_IN' && session) {
-        // Also handles when session is already active
         setPageState('ready')
       }
     })
 
-    // Also try to get current session in case already exchanged
+    // Fallback: check existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session && pageState === 'loading') {
-        setPageState('ready')
-      }
+      if (session) setPageState('ready')
     })
 
-    // If after 5 seconds no session, link is expired
+    // Timeout: if no session after 6s, link is expired
     const timeout = setTimeout(() => {
       setPageState(prev => prev === 'loading' ? 'expired' : prev)
-    }, 5000)
+    }, 6000)
 
     return () => {
       subscription.unsubscribe()
@@ -125,23 +127,25 @@ export default function ResetPasswordPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!password)            { setError(ui.errRequired); return }
-    if (password.length < 8)  { setError(ui.errMin);      return }
-    if (password !== confirm)  { setError(ui.errMatch);    return }
+    if (!password)           { setError(ui.errRequired); return }
+    if (password.length < 8) { setError(ui.errMin);      return }
+    if (password !== confirm) { setError(ui.errMatch);    return }
 
     setLoading(true)
     setError('')
+
     const supabase = createClient()
     const { error: updateError } = await supabase.auth.updateUser({ password })
     setLoading(false)
 
     if (updateError) { setError(updateError.message); return }
 
+    // Sign out and redirect to login
+    await supabase.auth.signOut()
     setPageState('done')
-    setTimeout(() => router.push('/auth/login'), 2500)
+    setTimeout(() => router.push('/auth/login'), 2000)
   }
 
-  // ── Logo ──────────────────────────────────────────────
   const Logo = () => (
     <div className="text-center mb-8">
       <div className="inline-flex items-center gap-2 mb-3">
@@ -168,10 +172,9 @@ export default function ResetPasswordPage() {
 
       <div className="relative w-full max-w-md">
         <Logo />
-
         <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl">
 
-          {/* ── Loading ── */}
+          {/* Loading */}
           {pageState === 'loading' && (
             <div className="text-center py-6 space-y-3">
               <svg className="w-8 h-8 text-blue-400 animate-spin mx-auto" fill="none" viewBox="0 0 24 24">
@@ -182,7 +185,7 @@ export default function ResetPasswordPage() {
             </div>
           )}
 
-          {/* ── Expired ── */}
+          {/* Expired */}
           {pageState === 'expired' && (
             <div className="text-center space-y-4">
               <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto">
@@ -193,12 +196,12 @@ export default function ResetPasswordPage() {
               <p className="text-white font-semibold">{ui.errExpired}</p>
               <Link href="/auth/forgot-password"
                 className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition">
-                ← {lang === 'ar' ? 'طلب رابط جديد' : lang === 'fr' ? 'Demander un nouveau lien' : 'Request new link'}
+                {lang === 'ar' ? 'طلب رابط جديد' : lang === 'fr' ? 'Demander un nouveau lien' : 'Request new link'}
               </Link>
             </div>
           )}
 
-          {/* ── Success ── */}
+          {/* Success */}
           {pageState === 'done' && (
             <div className="text-center space-y-4">
               <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto">
@@ -217,7 +220,7 @@ export default function ResetPasswordPage() {
             </div>
           )}
 
-          {/* ── Form ── */}
+          {/* Form */}
           {pageState === 'ready' && (
             <form onSubmit={handleSubmit} className="space-y-5" dir={isRtl ? 'rtl' : 'ltr'}>
 
@@ -226,8 +229,7 @@ export default function ResetPasswordPage() {
                 <label className="block text-sm font-medium text-slate-300 mb-1.5">{ui.newPassword}</label>
                 <div className="relative">
                   <input
-                    type={showPwd ? 'text' : 'password'}
-                    value={password}
+                    type={showPwd ? 'text' : 'password'} value={password}
                     onChange={e => { setPassword(e.target.value); setError('') }}
                     placeholder="••••••••"
                     className={`w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white
@@ -240,7 +242,6 @@ export default function ResetPasswordPage() {
                     {showPwd ? ui.hide : ui.show}
                   </button>
                 </div>
-                {/* Strength bar */}
                 {password && (
                   <div className="mt-2 space-y-1">
                     <div className="flex gap-1">
@@ -259,13 +260,12 @@ export default function ResetPasswordPage() {
                 )}
               </div>
 
-              {/* Confirm password */}
+              {/* Confirm */}
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-1.5">{ui.confirmPassword}</label>
                 <div className="relative">
                   <input
-                    type={showConf ? 'text' : 'password'}
-                    value={confirm}
+                    type={showConf ? 'text' : 'password'} value={confirm}
                     onChange={e => { setConfirm(e.target.value); setError('') }}
                     placeholder="••••••••"
                     className={`w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white
@@ -315,7 +315,6 @@ export default function ResetPasswordPage() {
               </button>
             </form>
           )}
-
         </div>
       </div>
     </div>
