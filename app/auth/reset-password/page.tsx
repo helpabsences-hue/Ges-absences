@@ -92,15 +92,8 @@ export default function ResetPasswordPage() {
   useEffect(() => {
     const supabase = createClient()
 
-    // ── Key fix: exchange the full URL (contains the code in hash or query) ──
-    supabase.auth.exchangeCodeForSession(window.location.href)
-      .then(({ error }) => {
-        if (error) {
-          console.error('exchangeCodeForSession error:', error.message)
-        }
-      })
-
-    // Listen for PASSWORD_RECOVERY event — fires after code is exchanged
+    // The callback route already exchanged the code server-side.
+    // We just need to detect the active session here.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY' && session) {
         setPageState('ready')

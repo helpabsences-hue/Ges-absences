@@ -7,9 +7,8 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
-
   const code = searchParams.get('code')
-  const type = searchParams.get('type') // 'recovery' for password reset
+  const type = searchParams.get('type')
 
   if (code) {
     const cookieStore = await cookies()
@@ -24,24 +23,21 @@ export async function GET(request: NextRequest) {
               cookiesToSet.forEach(({ name, value, options }) =>
                 cookieStore.set(name, value, options)
               )
-            } catch { /* called from Server Component */ }
+            } catch {}
           },
         },
       }
     )
 
     const { error } = await supabase.auth.exchangeCodeForSession(code)
-
     if (!error) {
       if (type === 'recovery') {
         return NextResponse.redirect(`${origin}/auth/reset-password`)
       }
       return NextResponse.redirect(`${origin}/dashboard`)
     }
-
-    console.error('exchangeCodeForSession error:', error.message)
+    console.error('Callback exchange error:', error.message)
   }
 
-  // No code or exchange failed — back to forgot password with error hint
   return NextResponse.redirect(`${origin}/auth/forgot-password?error=link_expired`)
 }

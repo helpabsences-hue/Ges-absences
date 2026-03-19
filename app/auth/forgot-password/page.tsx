@@ -20,7 +20,7 @@ const UI: Record<Lang, {
     title: 'Mot de passe oublié',
     subtitle: 'Entrez votre email pour recevoir un lien de réinitialisation',
     emailLabel: 'Adresse email', emailPlaceholder: 'vous@ecole.com',
-    sendBtn: 'Envoyer le lien', sending: 'Envoi en cours…',
+    sendBtn: 'Envoyer le lien', sending: 'Envoi…',
     backToLogin: 'Retour à la connexion',
     successTitle: 'Email envoyé !',
     successDesc: 'Un lien de réinitialisation a été envoyé à',
@@ -81,7 +81,7 @@ function ForgotPasswordContent() {
     try {
       const supabase = createClient()
       const { error: authError } = await supabase.auth.resetPasswordForEmail(trimmed, {
-        redirectTo: `${window.location.origin}/auth/reset-password`,
+        redirectTo: `${window.location.origin}/auth/callback?type=recovery`,
       })
       if (authError) { setError(authError.message); return }
       setSent(true)
@@ -94,15 +94,11 @@ function ForgotPasswordContent() {
 
   return (
     <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4" dir={isRtl ? 'rtl' : 'ltr'}>
-
-      {/* Background glow */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-blue-600/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-1/4 w-[400px] h-[300px] bg-indigo-600/8 rounded-full blur-3xl" />
       </div>
 
       <div className="relative w-full max-w-[420px]">
-
         {/* Logo */}
         <div className="text-center mb-8">
           <div className={`inline-flex items-center gap-2.5 mb-4 ${isRtl ? 'flex-row-reverse' : ''}`}>
@@ -117,16 +113,12 @@ function ForgotPasswordContent() {
             </span>
           </div>
           <h1 className="text-xl font-semibold text-white">{ui.title}</h1>
-          <p className="text-sm text-slate-400 mt-1.5 px-4">{ui.subtitle}</p>
+          <p className="text-sm text-slate-400 mt-1.5">{ui.subtitle}</p>
         </div>
 
-        {/* Card */}
         <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-3xl p-8 shadow-2xl">
-
           {sent ? (
-            /* ── Success state ── */
             <div className="text-center space-y-5">
-              {/* Animated checkmark */}
               <div className="relative mx-auto w-20 h-20">
                 <div className="absolute inset-0 bg-green-500/20 rounded-full animate-ping" style={{ animationDuration: '2s' }} />
                 <div className="relative w-20 h-20 bg-green-500/20 border border-green-500/30 rounded-full flex items-center justify-center">
@@ -135,23 +127,18 @@ function ForgotPasswordContent() {
                   </svg>
                 </div>
               </div>
-
               <div>
                 <h2 className="text-lg font-semibold text-white">{ui.successTitle}</h2>
                 <p className="text-slate-400 text-sm mt-1.5">
                   {ui.successDesc} <span className="text-white font-medium">{email}</span>
                 </p>
               </div>
-
-              {/* Spam hint box */}
               <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl px-4 py-3 flex items-start gap-3">
                 <svg className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <p className="text-xs text-amber-300 text-left">{ui.successHint}</p>
               </div>
-
               <Link href="/auth/login"
                 className={`inline-flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300 font-medium transition-colors ${isRtl ? 'flex-row-reverse' : ''}`}>
                 <svg className={`w-4 h-4 ${isRtl ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -160,15 +147,10 @@ function ForgotPasswordContent() {
                 {ui.backToLogin}
               </Link>
             </div>
-
           ) : (
-            /* ── Form ── */
             <form onSubmit={handleSubmit} className="space-y-5">
-
               <div>
-                <label className={`block text-sm font-medium text-slate-300 mb-2 ${isRtl ? 'text-right' : ''}`}>
-                  {ui.emailLabel}
-                </label>
+                <label className={`block text-sm font-medium text-slate-300 mb-2 ${isRtl ? 'text-right' : ''}`}>{ui.emailLabel}</label>
                 <div className="relative">
                   <div className={`absolute top-1/2 -translate-y-1/2 text-slate-500 ${isRtl ? 'right-3.5' : 'left-3.5'}`}>
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -176,37 +158,30 @@ function ForgotPasswordContent() {
                         d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
                   </div>
-                  <input
-                    type="email" value={email} autoComplete="email"
+                  <input type="email" value={email} autoComplete="email"
                     onChange={e => { setEmail(e.target.value); setError('') }}
                     placeholder={ui.emailPlaceholder}
                     className={`w-full bg-slate-800/60 border border-slate-700 rounded-2xl py-3 text-sm text-white
-                      placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                      transition-all duration-200
+                      placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all
                       ${isRtl ? 'text-right pr-10 pl-4' : 'pl-10 pr-4'}
-                      ${error ? 'border-red-500/50 focus:ring-red-500' : ''}`}
+                      ${error ? 'border-red-500/50' : ''}`}
                   />
                 </div>
               </div>
 
-              {/* Error */}
               {error && (
-                <div className={`flex items-center gap-2.5 bg-red-500/10 border border-red-500/20
-                  rounded-2xl px-4 py-3 text-red-400 text-sm ${isRtl ? 'flex-row-reverse' : ''}`}>
+                <div className={`flex items-center gap-2.5 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 text-red-400 text-sm ${isRtl ? 'flex-row-reverse' : ''}`}>
                   <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   {error}
                 </div>
               )}
 
-              {/* Submit */}
               <button type="submit" disabled={loading}
                 className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-60 disabled:cursor-not-allowed
-                  text-white font-semibold py-3 rounded-2xl transition-all duration-200
-                  flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20
-                  active:scale-[0.98]">
+                  text-white font-semibold py-3 rounded-2xl transition-all flex items-center justify-center gap-2
+                  shadow-lg shadow-blue-600/20 active:scale-[0.98]">
                 {loading ? (
                   <>
                     <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -218,15 +193,13 @@ function ForgotPasswordContent() {
                 ) : (
                   <>
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                     </svg>
                     {ui.sendBtn}
                   </>
                 )}
               </button>
 
-              {/* Back link */}
               <div className="text-center pt-1">
                 <Link href="/auth/login"
                   className={`inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition-colors ${isRtl ? 'flex-row-reverse' : ''}`}>
