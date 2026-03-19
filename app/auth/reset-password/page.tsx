@@ -107,10 +107,10 @@ export default function ResetPasswordPage() {
       if (session) setPageState('ready')
     })
 
-    // Timeout: if no session after 6s, link is expired
+    // Timeout: if no session after 15s, link is expired
     const timeout = setTimeout(() => {
       setPageState(prev => prev === 'loading' ? 'expired' : prev)
-    }, 6000)
+    }, 15000)
 
     return () => {
       subscription.unsubscribe()
