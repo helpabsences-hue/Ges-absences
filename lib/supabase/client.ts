@@ -7,7 +7,7 @@ export function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       auth: {
-        flowType: 'pkce',        // PKCE is more secure — code can only be exchanged once
+        flowType: 'implicit', // No PKCE — works across browsers/email clients
         autoRefreshToken: true,
         detectSessionInUrl: true,
         persistSession: true,
