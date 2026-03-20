@@ -81,7 +81,7 @@ function ForgotPasswordContent() {
     try {
       const supabase = createClient()
       const { error: authError } = await supabase.auth.resetPasswordForEmail(trimmed, {
-        redirectTo: `${window.location.origin}/auth/callback?type=recovery`,
+        redirectTo: `${window.location.origin}/auth/callback`,
       })
       if (authError) { setError(authError.message); return }
       setSent(true)
