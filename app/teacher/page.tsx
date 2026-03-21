@@ -113,7 +113,7 @@ export default function TeacherPage() {
   const {
     todaySlots, allSlots,
     scheduleLoading, sessionLoading,
-    activeSession, fetchSchedule, startSession,
+    activeSession, fetchSchedule, subscribeToSchedule, startSession,
   } = useAttendanceStore()
 
   const [tab,      setTab]      = useState<Tab>('today')
@@ -130,7 +130,18 @@ export default function TeacherPage() {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
   })
 
-  useEffect(() => { fetchSchedule() }, [fetchSchedule])
+  // Wait for profile to load, then fetch + subscribe to realtime
+  useEffect(() => {
+    if (!profile?.id) return
+
+    // Initial fetch
+    fetchSchedule()
+
+    // Subscribe to realtime — returns cleanup function
+    const unsubscribe = subscribeToSchedule(profile.id)
+
+    return () => { unsubscribe() }
+  }, [profile?.id])
 
   const fetchHistory = useCallback(async () => {
     setHistLoad(true)

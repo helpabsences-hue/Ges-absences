@@ -33,7 +33,8 @@ interface AttendanceState {
   saved:           boolean
 
   // Actions
-  fetchSchedule:   () => Promise<void>
+  fetchSchedule:        () => Promise<void>
+  subscribeToSchedule:  (uid: string) => () => void  // returns unsubscribe fn
   startSession:    (slot: TeacherPlanningFull) => Promise<void>
   setStatus:       (studentId: string, status: AttendanceStatus) => void
   setReason:       (studentId: string, reason: string) => void
@@ -63,27 +64,31 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
   saving:          false,
   saved:           false,
 
+  // ── Realtime subscription for schedule changes ────────
+  subscribeToSchedule: (uid: string) => {
+    const supabase = createClient()
+    const channel = supabase
+      .channel(`teacher_planning_${uid}`)
+      .on('postgres_changes', {
+        event:  '*',
+        schema: 'public',
+        table:  'teacher_planning',
+        filter: `teacher_id=eq.${uid}`,
+      }, () => {
+        get().fetchSchedule()
+      })
+      .subscribe()
+
+    // Return unsubscribe function
+    return () => { supabase.removeChannel(channel) }
+  },
+
   // ── Load teacher's full schedule ───────────────────────
   fetchSchedule: async () => {
     set({ scheduleLoading: true })
     const supabase = createClient()
     const uid = useAuthStore.getState().profile?.id
     if (!uid) { set({ scheduleLoading: false }); return }
-
-    // Subscribe to realtime changes on teacher_planning
-    // This way when admin adds/edits/deletes a slot, teacher sees it immediately
-    supabase
-      .channel('teacher_planning_changes')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'teacher_planning',
-        filter: `teacher_id=eq.${uid}`,
-      }, () => {
-        // Re-fetch schedule when any change happens
-        get().fetchSchedule()
-      })
-      .subscribe()
 
     const { data, error } = await supabase
       .from('teacher_planning')
