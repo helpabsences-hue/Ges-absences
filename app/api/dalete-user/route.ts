@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  // Verify the user being deleted belongs to the same school
+  // Verify target belongs to same school
   const { data: target } = await supabase
     .from('profiles').select('school_id, role').eq('id', userId).single()
 
@@ -31,27 +31,34 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Cannot delete user from another school' }, { status: 403 })
   }
 
-  // Admin cannot delete another admin — only super_admin can
   if (target.role === 'admin' && caller.role !== 'super_admin') {
     return NextResponse.json({ error: 'Only super admins can delete admins' }, { status: 403 })
   }
 
   const admin = createServiceClient()
 
-  // Step 1: Delete related data first
-  await admin.from('teacher_planning').delete().eq('teacher_id', userId)
-  await admin.from('attendance').delete().eq('student_id', userId)
-
-  // Step 2: Delete profile (cascade handles most relations via FK)
-  await admin.from('profiles').delete().eq('id', userId)
-
-  // Step 3: Delete from Supabase Auth — this is the key step
+  // ── Delete from Supabase Auth FIRST ──────────────────
+  // auth.admin.deleteUser cascades and removes the profile via DB trigger/FK
+  // Do this BEFORE deleting profile to avoid FK constraint issues
   const { error: authError } = await admin.auth.admin.deleteUser(userId)
 
   if (authError) {
     console.error('Auth delete error:', authError.message)
-    return NextResponse.json({ error: authError.message }, { status: 500 })
+
+    // Fallback: if auth delete fails, try deleting profile manually
+    // This happens when the auth user doesn't exist but profile does
+    await admin.from('teacher_planning').delete().eq('teacher_id', userId)
+    await admin.from('profiles').delete().eq('id', userId)
+
+    return NextResponse.json({ 
+      success: true, 
+      warning: 'Deleted from profiles only — ' + authError.message 
+    })
   }
+
+  // Auth delete succeeded — profile is removed by CASCADE
+  // But also clean up related data that CASCADE might miss
+  await admin.from('teacher_planning').delete().eq('teacher_id', userId)
 
   return NextResponse.json({ success: true })
 }

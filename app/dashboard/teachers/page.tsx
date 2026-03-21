@@ -1,4 +1,5 @@
 'use client'
+import { toast } from 'sonner'
 
 export const dynamic = 'force-dynamic'
 // app/dashboard/teachers/page.tsx
@@ -124,16 +125,23 @@ export default function TeachersPage() {
 
   const handleDelete = async (id: string) => {
     setDeletingId(id)
-    const res = await fetch('/api/delete-user', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: id }),
-    })
-    if (res.ok) {
-      setTeachers((prev) => prev.filter((t) => t.id !== id))
-    } else {
+    try {
+      const res = await fetch('/api/delete-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: id }),
+      })
       const data = await res.json()
-      console.error('Delete failed:', data.error)
+      if (res.ok) {
+        setTeachers((prev) => prev.filter((t) => t.id !== id))
+        toast.success(lang === 'ar' ? 'تم حذف الأستاذ' : lang === 'fr' ? 'Enseignant supprimé' : 'Teacher deleted')
+      } else {
+        console.error('Delete failed:', data.error)
+        toast.error(data.error ?? 'Échec de la suppression')
+      }
+    } catch (err) {
+      console.error('Delete error:', err)
+      toast.error('Erreur de connexion')
     }
     setDeletingId(null)
     setConfirmId(null)
