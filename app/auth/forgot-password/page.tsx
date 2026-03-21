@@ -4,12 +4,13 @@ export const dynamic = 'force-dynamic'
 import { useState, Suspense } from 'react'
 import Link from 'next/link'
 import { createAuthClient } from '@/lib/supabase/auth-client'
+import { LogoIcon } from '@/components/shared/LogoIcon'
 
 function ForgotPasswordContent() {
-  const [email,   setEmail]   = useState('')
+  const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
-  const [sent,    setSent]    = useState(false)
-  const [err,     setErr]     = useState('')
+  const [sent, setSent] = useState(false)
+  const [err, setErr] = useState('')
 
   const send = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -28,19 +29,16 @@ function ForgotPasswordContent() {
   if (sent) return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md text-center space-y-5">
-        <div className="inline-flex items-center gap-2">
-          <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
-            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
-            </svg>
-          </div>
-          <span className="text-2xl font-bold text-white">Attend<span className="text-blue-400">ify</span></span>
+        <div className={`inline-flex items-center gap-2 mb-3`}>
+          <LogoIcon className="w-10 h-10" />
+          <span className="text-2xl font-bold text-slate-50 tracking-tight">
+            Attend<span className="text-blue-400">efy</span>
+          </span>
         </div>
         <div className="bg-white/5 border border-white/10 rounded-2xl p-8">
           <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
             <svg className="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
           <p className="text-white font-semibold text-lg">Email envoyé !</p>
@@ -62,7 +60,7 @@ function ForgotPasswordContent() {
             <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
               <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
               </svg>
             </div>
             <span className="text-2xl font-bold text-white">Attend<span className="text-blue-400">ify</span></span>
@@ -75,7 +73,7 @@ function ForgotPasswordContent() {
               <label className="block text-sm font-medium text-slate-300 mb-1.5">Adresse email</label>
               <input type="email" value={email} onChange={e => { setEmail(e.target.value); setErr('') }}
                 placeholder="vous@ecole.com" autoComplete="email"
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             {err && <p className="text-red-400 text-sm">{err}</p>}
             <button type="submit" disabled={loading}

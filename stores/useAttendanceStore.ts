@@ -70,6 +70,21 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
     const uid = useAuthStore.getState().profile?.id
     if (!uid) { set({ scheduleLoading: false }); return }
 
+    // Subscribe to realtime changes on teacher_planning
+    // This way when admin adds/edits/deletes a slot, teacher sees it immediately
+    supabase
+      .channel('teacher_planning_changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'teacher_planning',
+        filter: `teacher_id=eq.${uid}`,
+      }, () => {
+        // Re-fetch schedule when any change happens
+        get().fetchSchedule()
+      })
+      .subscribe()
+
     const { data, error } = await supabase
       .from('teacher_planning')
       .select(`

@@ -1,4 +1,5 @@
 'use client'
+import { toast } from 'sonner'
 
 export const dynamic = 'force-dynamic'
 // app/dashboard/planning/page.tsx
@@ -110,7 +111,7 @@ const EMPTY: AddPlanningPayload = {
 function fmt(t: string) { return t.slice(0, 5) }
 
 export default function PlanningPage() {
-  const { slots, teachers, groups, courses, loading, error, fetchSlots, fetchDropdowns, addSlot, deleteSlot } = usePlanningStore()
+  const { slots, teachers, groups, courses, loading, error, fetchSlots, fetchDropdowns, addSlot, updateSlot, deleteSlot } = usePlanningStore()
   const { language } = useSettingsStore()
   const lang  = (language || 'fr') as Lang
   const ui    = UI[lang]
@@ -118,6 +119,7 @@ export default function PlanningPage() {
 
   const [showForm,      setShowForm]      = useState(false)
   const [form,          setForm]          = useState<AddPlanningPayload>(EMPTY)
+  const [editId,        setEditId]        = useState<string | null>(null)
   const [saving,        setSaving]        = useState(false)
   const [formError,     setFormError]     = useState('')
   const [activeDay,     setActiveDay]     = useState<Day | 'All'>('All')
@@ -125,8 +127,21 @@ export default function PlanningPage() {
 
   useEffect(() => { fetchSlots(); fetchDropdowns() }, [fetchSlots, fetchDropdowns])
 
-  const openForm     = () => { setForm(EMPTY); setFormError(''); setShowForm(true) }
-  const handleCancel = () => { setShowForm(false); setForm(EMPTY); setFormError('') }
+  const openForm     = () => { setForm(EMPTY); setEditId(null); setFormError(''); setShowForm(true) }
+  const handleCancel = () => { setShowForm(false); setForm(EMPTY); setEditId(null); setFormError('') }
+  const openEdit     = (slot: TeacherPlanningFull) => {
+    setForm({
+      teacher_id: slot.teacher_id,
+      group_id:   slot.group_id,
+      course_id:  slot.course_id,
+      day:        slot.day,
+      start_time: slot.start_time.slice(0, 5),
+      end_time:   slot.end_time.slice(0, 5),
+    })
+    setEditId(slot.id)
+    setFormError('')
+    setShowForm(true)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -135,15 +150,23 @@ export default function PlanningPage() {
     if (!form.course_id)                     { setFormError(ui.errCourse);  return }
     if (form.start_time >= form.end_time)    { setFormError(ui.errTime);    return }
     setSaving(true); setFormError('')
-    const id = await addSlot(form)
-    setSaving(false)
-    if (!id) { const e = usePlanningStore.getState().error; if (e) setFormError(e); return }
+    if (editId) {
+      const ok = await updateSlot(editId, form)
+      setSaving(false)
+      if (!ok) { const e = usePlanningStore.getState().error; if (e) setFormError(e); return }
+      toast.success(lang === 'ar' ? 'تم التعديل' : lang === 'fr' ? 'Créneau modifié' : 'Slot updated')
+    } else {
+      const id = await addSlot(form)
+      setSaving(false)
+      if (!id) { const e = usePlanningStore.getState().error; if (e) setFormError(e); return }
+      toast.success(lang === 'ar' ? 'تمت الإضافة' : lang === 'fr' ? 'Créneau ajouté' : 'Slot added')
+    }
     handleCancel()
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm(ui.confirmDelete)) return
     await deleteSlot(id)
+    toast.success(lang === 'ar' ? 'تم الحذف' : lang === 'fr' ? 'Créneau supprimé' : 'Slot deleted')
   }
 
   const filtered = slots.filter(s => {
@@ -190,7 +213,7 @@ export default function PlanningPage() {
       {/* ── Form ─────────────────────────────────────── */}
       {showForm && (
         <div className="bg-slate-900 border border-slate-700 rounded-2xl p-4 sm:p-6">
-          <h3 className="text-sm font-semibold text-white mb-4 sm:mb-5">{ui.newSlot}</h3>
+          <h3 className="text-sm font-semibold text-white mb-4 sm:mb-5">{editId ? (lang === "ar" ? "تعديل الخانة" : lang === "fr" ? "Modifier le créneau" : "Edit Slot") : ui.newSlot}</h3>
           <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
 
             {/* Row 1: Teacher / Group / Course */}
@@ -398,8 +421,15 @@ export default function PlanningPage() {
                               <span className="text-xs sm:text-sm text-slate-300">{slot.courses.name}</span>
                             </td>
                             <td className="px-4 sm:px-5 py-3 sm:py-3.5">
-                              <div className={`flex opacity-0 group-hover:opacity-100 transition
+                              <div className={`flex items-center gap-1 opacity-0 group-hover:opacity-100 transition
                                 ${isRtl ? 'justify-start' : 'justify-end'}`}>
+                                <button onClick={() => openEdit(slot)}
+                                  className="p-1.5 rounded-lg text-slate-500 hover:text-blue-400 hover:bg-blue-500/10 transition">
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                  </svg>
+                                </button>
                                 <button onClick={() => handleDelete(slot.id)}
                                   className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition">
                                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

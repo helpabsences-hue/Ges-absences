@@ -1,4 +1,5 @@
 'use client'
+import { toast } from 'sonner'
 
 export const dynamic = 'force-dynamic'
 // app/dashboard/groups/page.tsx
@@ -133,8 +134,7 @@ export default function GroupsPage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm(ui.confirmDelete)) return
-    await deleteGroup(id)
+        await deleteGroup(id)
   }
 
   const filtered = groups.filter(g => g.name.toLowerCase().includes(search.toLowerCase()))

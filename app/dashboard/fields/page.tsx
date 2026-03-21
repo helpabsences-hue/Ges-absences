@@ -1,4 +1,5 @@
 'use client'
+import { toast } from 'sonner'
 
 export const dynamic = 'force-dynamic'
 // app/dashboard/fields/page.tsx
@@ -108,8 +109,7 @@ export default function FieldsPage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm(ui.confirmDelete)) return
-    await deleteField(id)
+        await deleteField(id)
   }
 
   return (

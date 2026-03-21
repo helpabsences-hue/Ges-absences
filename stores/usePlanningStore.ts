@@ -15,6 +15,7 @@ interface PlanningState {
   fetchSlots:    () => Promise<void>
   fetchDropdowns: () => Promise<void>   // teachers + groups + courses in one call
   addSlot:       (data: AddPlanningPayload) => Promise<string | null>
+  updateSlot:    (id: string, data: AddPlanningPayload) => Promise<boolean>
   deleteSlot:    (id: string) => Promise<void>
 }
 
@@ -123,6 +124,26 @@ export const usePlanningStore = create<PlanningState>((set, get) => ({
 
     await get().fetchSlots()
     return inserted.id
+  },
+
+  // ── Update slot ──────────────────────────────────────
+  updateSlot: async (id, data) => {
+    const supabase = createClient()
+    const { error } = await supabase
+      .from('teacher_planning')
+      .update({
+        teacher_id: data.teacher_id,
+        group_id:   data.group_id,
+        course_id:  data.course_id,
+        day:        data.day,
+        start_time: data.start_time,
+        end_time:   data.end_time,
+      })
+      .eq('id', id)
+
+    if (error) { set({ error: error.message }); return false }
+    await get().fetchSlots()
+    return true
   },
 
   // ── Delete slot ───────────────────────────────────────

@@ -1,4 +1,5 @@
 'use client'
+import { toast } from 'sonner'
 
 export const dynamic = 'force-dynamic'
 // app/dashboard/students/page.tsx
@@ -122,8 +123,7 @@ export default function StudentsPage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm(ui.confirmDelete)) return
-    await deleteStudent(id)
+        await deleteStudent(id)
   }
 
   const filtered = students.filter((s) => {

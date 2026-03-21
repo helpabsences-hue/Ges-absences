@@ -1,4 +1,5 @@
 'use client'
+import { toast } from 'sonner'
 // components/dashboard/BulkStudentUpload.tsx
 
 import { useRef, useState } from 'react'
@@ -32,7 +33,7 @@ export default function BulkStudentUpload() {
   const pickFile = (f: File | null) => {
     if (!f) return
     if (!f.name.endsWith('.csv')) {
-      alert('Please select a .csv file.')
+      toast.error('Please select a .csv file.')
       return
     }
     setFile(f)
