@@ -99,8 +99,15 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
 
     if (error || !data) { set({ scheduleLoading: false }); return }
 
-    const all   = data as TeacherPlanningFull[]
-    const today = all.filter((s) => s.day === TODAY_NAME())
+    const todayDate = TODAY_DATE()
+    const todayName = TODAY_NAME()
+    const all = data as TeacherPlanningFull[]
+
+    // Today's slots: weekly slots for today's day name OR special sessions for today's date
+    const today = all.filter((s: any) => {
+      if (s.session_date) return s.session_date === todayDate  // special session
+      return s.day === todayName                                // weekly recurring
+    })
 
     set({ allSlots: all, todaySlots: today, scheduleLoading: false })
   },

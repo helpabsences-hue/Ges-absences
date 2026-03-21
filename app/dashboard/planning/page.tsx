@@ -24,6 +24,7 @@ const DAY_LABELS: Record<Day, Record<Lang, string>> = {
 const UI: Record<Lang, {
   title: string; subtitle: string; subtitleOne: string
   addSlot: string; newSlot: string
+  sessionDateLabel: string; sessionDateHint: string
   teacher: string; selectTeacher: string
   group: string; selectGroup: string; year: string
   course: string; selectCourse: string
@@ -39,6 +40,7 @@ const UI: Record<Lang, {
   fr: {
     title: 'Planning', subtitle: ' créneaux au total', subtitleOne: ' créneau au total',
     addSlot: 'Ajouter un Créneau', newSlot: 'Nouveau Créneau',
+    sessionDateLabel: 'Date spécifique (optionnel)', sessionDateHint: 'Laisser vide pour un créneau récurrent hebdomadaire',
     teacher: 'Enseignant', selectTeacher: 'Choisir un enseignant',
     group: 'Groupe', selectGroup: 'Choisir un groupe', year: 'A',
     course: 'Matière', selectCourse: 'Choisir une matière',
@@ -57,6 +59,7 @@ const UI: Record<Lang, {
   en: {
     title: 'Planning', subtitle: ' slots total', subtitleOne: ' slot total',
     addSlot: 'Add Slot', newSlot: 'New Planning Slot',
+    sessionDateLabel: 'Specific date (optional)', sessionDateHint: 'Leave empty for a weekly recurring slot',
     teacher: 'Teacher', selectTeacher: 'Select teacher',
     group: 'Group', selectGroup: 'Select group', year: 'Y',
     course: 'Course', selectCourse: 'Select course',
@@ -75,6 +78,7 @@ const UI: Record<Lang, {
   ar: {
     title: 'الجدول الزمني', subtitle: ' خانة إجمالاً', subtitleOne: ' خانة إجمالاً',
     addSlot: 'إضافة خانة', newSlot: 'خانة زمنية جديدة',
+    sessionDateLabel: 'تاريخ محدد (اختياري)', sessionDateHint: 'اتركه فارغاً للخانة الأسبوعية المتكررة',
     teacher: 'الأستاذ', selectTeacher: 'اختر أستاذاً',
     group: 'الفصل', selectGroup: 'اختر فصلاً', year: 'س',
     course: 'المادة', selectCourse: 'اختر مادة',
@@ -106,6 +110,7 @@ const DAY_COLORS: Record<Day, string> = {
 const EMPTY: AddPlanningPayload = {
   teacher_id: '', group_id: '', course_id: '',
   day: 'Monday', start_time: '08:00', end_time: '09:00',
+  session_date: '',
 }
 
 function fmt(t: string) { return t.slice(0, 5) }
@@ -131,12 +136,13 @@ export default function PlanningPage() {
   const handleCancel = () => { setShowForm(false); setForm(EMPTY); setEditId(null); setFormError('') }
   const openEdit     = (slot: TeacherPlanningFull) => {
     setForm({
-      teacher_id: slot.teacher_id,
-      group_id:   slot.group_id,
-      course_id:  slot.course_id,
-      day:        slot.day,
-      start_time: slot.start_time.slice(0, 5),
-      end_time:   slot.end_time.slice(0, 5),
+      teacher_id:   slot.teacher_id,
+      group_id:     slot.group_id,
+      course_id:    slot.course_id,
+      day:          slot.day,
+      start_time:   slot.start_time.slice(0, 5),
+      end_time:     slot.end_time.slice(0, 5),
+      session_date: (slot as any).session_date || '',
     })
     setEditId(slot.id)
     setFormError('')
@@ -272,6 +278,17 @@ export default function PlanningPage() {
                 <input type="time" value={form.end_time}
                   onChange={e => setForm(f => ({ ...f, end_time: e.target.value }))}
                   className={inputCls} />
+
+              {/* Session date — optional override */}
+              <div className="pt-1 border-t border-slate-800">
+                <label className={`block text-xs font-medium text-slate-400 mb-1.5 ${isRtl ? 'text-right' : ''}`}>
+                  {ui.sessionDateLabel}
+                </label>
+                <input type="date" value={form.session_date || ''}
+                  onChange={e => setForm(f => ({ ...f, session_date: e.target.value }))}
+                  className={inputCls} />
+                <p className="text-xs text-slate-600 mt-1">{ui.sessionDateHint}</p>
+              </div>
               </div>
             </div>
 

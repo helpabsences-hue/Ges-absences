@@ -98,9 +98,13 @@ export const usePlanningStore = create<PlanningState>((set, get) => ({
     const newStart = data.start_time
     const newEnd   = data.end_time
 
+    const toMin = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
+    const ns = toMin(newStart), ne = toMin(newEnd)
     const hasOverlap = existing.some((s) => {
-      // Overlap when: newStart < s.end_time AND newEnd > s.start_time
-      return newStart < s.end_time && newEnd > s.start_time
+      // Skip if editing same slot
+      const ss = toMin(s.start_time.slice(0,5)), se = toMin(s.end_time.slice(0,5))
+      // True overlap: strictly inside — touching is NOT overlap
+      return ns < se && ne > ss
     })
 
     if (hasOverlap) {
@@ -113,7 +117,16 @@ export const usePlanningStore = create<PlanningState>((set, get) => ({
 
     const { data: inserted, error } = await supabase
       .from('teacher_planning')
-      .insert({ ...data, school_id })
+      .insert({
+        teacher_id:   data.teacher_id,
+        group_id:     data.group_id,
+        course_id:    data.course_id,
+        day:          data.day,
+        start_time:   data.start_time,
+        end_time:     data.end_time,
+        session_date: data.session_date || null,  // null = weekly recurring
+        school_id,
+      })
       .select()
       .single()
 
@@ -132,12 +145,13 @@ export const usePlanningStore = create<PlanningState>((set, get) => ({
     const { error } = await supabase
       .from('teacher_planning')
       .update({
-        teacher_id: data.teacher_id,
-        group_id:   data.group_id,
-        course_id:  data.course_id,
-        day:        data.day,
-        start_time: data.start_time,
-        end_time:   data.end_time,
+        teacher_id:   data.teacher_id,
+        group_id:     data.group_id,
+        course_id:    data.course_id,
+        day:          data.day,
+        start_time:   data.start_time,
+        end_time:     data.end_time,
+        session_date: data.session_date || null,
       })
       .eq('id', id)
 

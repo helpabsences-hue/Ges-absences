@@ -183,10 +183,11 @@ export interface AddCoursePayload {
 }
 
 export interface AddPlanningPayload {
-  teacher_id: string
-  group_id: string
-  course_id: string
-  day: Day
-  start_time: string
-  end_time: string
+  teacher_id:   string
+  group_id:     string
+  course_id:    string
+  day:          Day
+  start_time:   string
+  end_time:     string
+  session_date?: string  // optional — if set, this is a one-time special session
 }
