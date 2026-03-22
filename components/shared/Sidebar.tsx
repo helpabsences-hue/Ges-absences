@@ -12,28 +12,30 @@ import { LogoIcon } from './LogoIcon'
 type Lang = 'fr' | 'en' | 'ar'
 
 const NAV_LABELS: Record<string, Record<Lang, string>> = {
-  '/dashboard':             { fr: 'Tableau de Bord', en: 'Dashboard',   ar: 'لوحة التحكم'    },
-  '/dashboard/teachers':   { fr: 'Enseignants',      en: 'Teachers',    ar: 'الأساتذة'       },
-  '/dashboard/students':   { fr: 'Étudiants',        en: 'Students',    ar: 'الطلاب'         },
-  '/dashboard/groups':     { fr: 'Groupes',           en: 'Groups',      ar: 'الفصول'         },
-  '/dashboard/fields':     { fr: 'Filières',          en: 'Fields',      ar: 'الشُّعَب'       },
-  '/dashboard/courses':    { fr: 'Matières',          en: 'Courses',     ar: 'المواد'         },
-  '/dashboard/planning':   { fr: 'Planning',          en: 'Planning',    ar: 'الجدول الزمني'  },
-  '/dashboard/reports':    { fr: 'Rapports',          en: 'Reports',     ar: 'التقارير'       },
-  '/dashboard/invitations':{ fr: 'Invitations',       en: 'Invitations', ar: 'الدعوات'        },
-  '/dashboard/settings':   { fr: 'Paramètres',        en: 'Settings',    ar: 'الإعدادات'      },
+  '/dashboard':             { fr: 'Tableau de Bord', en: 'Dashboard',      ar: 'لوحة التحكم'    },
+  '/dashboard/admins':      { fr: 'Administrateurs', en: 'Administrators', ar: 'المديرون'        },
+  '/dashboard/teachers':    { fr: 'Enseignants',     en: 'Teachers',       ar: 'الأساتذة'        },
+  '/dashboard/students':    { fr: 'Étudiants',       en: 'Students',       ar: 'الطلاب'          },
+  '/dashboard/groups':      { fr: 'Groupes',         en: 'Groups',         ar: 'الفصول'          },
+  '/dashboard/fields':      { fr: 'Filières',        en: 'Fields',         ar: 'الشُّعَب'        },
+  '/dashboard/courses':     { fr: 'Matières',        en: 'Courses',        ar: 'المواد'          },
+  '/dashboard/planning':    { fr: 'Planning',        en: 'Planning',       ar: 'الجدول الزمني'   },
+  '/dashboard/reports':     { fr: 'Rapports',        en: 'Reports',        ar: 'التقارير'        },
+  '/dashboard/invitations': { fr: 'Invitations',     en: 'Invitations',    ar: 'الدعوات'         },
+  '/dashboard/settings':    { fr: 'Paramètres',      en: 'Settings',       ar: 'الإعدادات'       },
 }
 
 const UI: Record<Lang, { school: string; signOut: string }> = {
-  fr: { school: 'École',     signOut: 'Déconnexion'      },
-  en: { school: 'School',    signOut: 'Sign out'         },
-  ar: { school: 'المدرسة',   signOut: 'تسجيل الخروج'    },
+  fr: { school: 'École',   signOut: 'Déconnexion'   },
+  en: { school: 'School',  signOut: 'Sign out'      },
+  ar: { school: 'المدرسة', signOut: 'تسجيل الخروج' },
 }
 
 interface NavItem { href: string; roles: Role[]; icon: React.ReactNode }
 
 const NAV_ITEMS: NavItem[] = [
   { href: '/dashboard',             roles: ['super_admin','admin'], icon: <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg> },
+  { href: '/dashboard/admins',      roles: ['super_admin'],         icon: <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg> },
   { href: '/dashboard/teachers',    roles: ['super_admin','admin'], icon: <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg> },
   { href: '/dashboard/students',    roles: ['super_admin','admin'], icon: <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg> },
   { href: '/dashboard/groups',      roles: ['super_admin','admin'], icon: <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg> },
@@ -65,12 +67,11 @@ export default function Sidebar() {
     href === '/dashboard' ? pathname === '/dashboard' : pathname.startsWith(href)
   const handleSignOut = async () => { await signOut(); router.push('/auth/login') }
 
-  // ── Sidebar content — NO overflow on the outer wrapper ──
   const sidebarInner = (
     <div className={`w-64 bg-slate-900 flex flex-col h-full
       ${isRtl ? 'border-l' : 'border-r'} border-slate-800`}>
 
-      {/* Logo + school — fixed height, never shrinks */}
+      {/* Logo + school */}
       <div className={`shrink-0 px-4 py-4 border-b border-slate-800 ${isRtl ? 'text-right' : ''}`}>
         <Link href="/dashboard"
           className={`flex items-center gap-2 mb-4 ${isRtl ? 'flex-row-reverse' : ''}`}>
@@ -80,22 +81,21 @@ export default function Sidebar() {
           </span>
         </Link>
 
-        <div className={`bg-blue-100  border border-slate-700 rounded-xl p-3
-          ${isRtl ? 'text-right' : ''}`}>
-          <span className="text-[10px] font-bold uppercase tracking-widest text-blue-600 block">
+        <div className={`bg-blue-300 border border-slate-700 rounded-xl p-3 ${isRtl ? 'text-right' : ''}`}>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-blue-700 block">
             {ui.school}
           </span>
-          <span className="text-sm font-semibold text-white dark:text-slate-800  truncate block mt-0.5">
+          <span className="text-sm font-semibold text-white truncate block mt-0.5">
             {profile.schools?.name}
           </span>
-          <span className="text-xs text-slate-400 truncate block mt-1">
+          <span className="text-xs text-slate-400 dark:text-slate-600 truncate block mt-1">
             📍 {profile.schools?.city}
           </span>
         </div>
       </div>
 
-      {/* Nav — takes remaining space, scrolls only if items overflow */}
-      <nav className="flex-1 min-h-0 px-2.5 py-2 space-y-0.5 overflow-y-auto">
+      {/* Nav */}
+      <nav className="flex-1 min-h-0 px-2.5 py-2 space-y-0.5 overflow-hidden">
         {visibleNav.map((item) => {
           const active = isActive(item.href)
           const label  = NAV_LABELS[item.href]?.[lang] ?? item.href
@@ -105,8 +105,8 @@ export default function Sidebar() {
                 transition-all duration-150 group
                 ${isRtl ? 'flex-row-reverse' : ''}
                 ${active
-                  ? 'bg-blue-500 text-white shadow-sm shadow-blue-900/40'
-                  : 'text-slate-400 hover:bg-blue-200 hover:text-white'
+                  ? 'bg-blue-600 text-white shadow-sm shadow-blue-900/40'
+                  : 'text-slate-400 hover:bg-blue-400 hover:text-white'
                 }`}
             >
               <span className={`shrink-0 transition-colors
@@ -121,15 +121,15 @@ export default function Sidebar() {
         })}
       </nav>
 
-      {/* Sign out — fixed at bottom, never pushed off screen */}
-      <div className={`shrink-0 px-2.5 py-3 border-t border-slate-800`}>
+      {/* Sign out */}
+      <div className="shrink-0 px-2.5 py-2 border-t border-slate-800">
         <button onClick={handleSignOut}
           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium
             text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-all
             ${isRtl ? 'flex-row-reverse' : ''}`}>
           <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
           </svg>
           <span className={isRtl ? 'flex-1 text-right' : ''}>{ui.signOut}</span>
         </button>
@@ -139,7 +139,7 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* Desktop — h-screen keeps it pinned, flex-col distributes space */}
+      {/* Desktop */}
       <div className="hidden md:flex h-screen sticky top-0 shrink-0">
         {sidebarInner}
       </div>
