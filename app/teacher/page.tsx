@@ -118,7 +118,8 @@ export default function TeacherPage() {
 
   const [tab,      setTab]      = useState<Tab>('today')
   const [history,  setHistory]  = useState<SessionHistory[]>([])
-  const [histLoad, setHistLoad] = useState(false)
+  const [histLoad,      setHistLoad]      = useState(false)
+  const [sessionStatus, setSessionStatus] = useState<Record<string, 'done' | 'resume' | 'fresh'>>({}) // slotId -> status
   const [expanded, setExpanded] = useState<string | null>(null)
   const [details,  setDetails]  = useState<Record<string, any[]>>({})
 
@@ -133,15 +134,45 @@ export default function TeacherPage() {
   // Wait for profile to load, then fetch + subscribe to realtime
   useEffect(() => {
     if (!profile?.id) return
-
-    // Initial fetch
     fetchSchedule()
-
-    // Subscribe to realtime — returns cleanup function
     const unsubscribe = subscribeToSchedule(profile.id)
-
     return () => { unsubscribe() }
   }, [profile?.id])
+
+  // Check session status whenever todaySlots changes
+  useEffect(() => {
+    if (todaySlots.length > 0) checkSessionStatus(todaySlots)
+  }, [todaySlots])
+
+  // Check which of today's slots have sessions (done or started but not saved)
+  const checkSessionStatus = async (slots: TeacherPlanningFull[]) => {
+    if (slots.length === 0) return
+    const supabase = createClient()
+    const today    = new Date().toISOString().split('T')[0]
+
+    // Get sessions for today
+    const { data: sessions } = await supabase
+      .from('class_sessions')
+      .select('id, planning_id')
+      .in('planning_id', slots.map(s => s.id))
+      .eq('session_date', today)
+
+    if (!sessions || sessions.length === 0) return
+
+    // Get attendance count for each session
+    const { data: attendance } = await supabase
+      .from('attendance')
+      .select('session_id')
+      .in('session_id', sessions.map((s: any) => s.id))
+
+    const attendedSessions = new Set((attendance ?? []).map((a: any) => a.session_id))
+
+    const status: Record<string, 'done' | 'resume' | 'fresh'> = {}
+    for (const session of sessions as any[]) {
+      status[session.planning_id] = attendedSessions.has(session.id) ? 'done' : 'resume'
+    }
+    setSessionStatus(status)
+  }
 
   const fetchHistory = useCallback(async () => {
     setHistLoad(true)
@@ -274,7 +305,19 @@ export default function TeacherPage() {
         ) : (
           <div className="space-y-3">
             {todaySlots.map(slot => (
-              <ScheduleCard key={slot.id} slot={slot} isToday onStart={startSession} loading={sessionLoading} />
+              <ScheduleCard
+                key={slot.id}
+                slot={slot}
+                isToday
+                onStart={async (s) => {
+                  await startSession(s)
+                  // Refresh status after starting
+                  setTimeout(() => checkSessionStatus(todaySlots), 500)
+                }}
+                loading={sessionLoading}
+                isDone={sessionStatus[slot.id] === 'done'}
+                isResume={sessionStatus[slot.id] === 'resume'}
+              />
             ))}
           </div>
         )

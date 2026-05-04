@@ -32,7 +32,7 @@ export default function TeacherShell({ children }: { children: React.ReactNode }
           </div>
           <div>
             <span className="text-base font-bold text-white tracking-tight">
-              Attend<span className="text-blue-400">ify</span>
+              Attend<span className="text-blue-400">efy</span>
             </span>
             {profile && (
               <span className="text-slate-500 text-sm ml-2">— {profile.schools?.name}</span>

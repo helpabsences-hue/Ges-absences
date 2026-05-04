@@ -123,19 +123,33 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
     const supabase = createClient()
     const date = TODAY_DATE()
 
-    // 1. Upsert session row
-    const { data: sessionData, error: sessionError } = await supabase
+    // 1. Try to find existing session first (resume / modify flow)
+    let sessionData: any = null
+
+    const { data: existing } = await supabase
       .from('class_sessions')
-      .upsert(
-        { planning_id: slot.id, session_date: date },
-        { onConflict: 'planning_id,session_date' }
-      )
       .select()
+      .eq('planning_id', slot.id)
+      .eq('session_date', date)
       .single()
 
-    if (sessionError || !sessionData) {
-      set({ sessionLoading: false })
-      return
+    if (existing) {
+      // Session already exists — resume or modify it
+      sessionData = existing
+    } else {
+      // Create new session
+      const { data: created, error: createError } = await supabase
+        .from('class_sessions')
+        .insert({ planning_id: slot.id, session_date: date })
+        .select()
+        .single()
+
+      if (createError || !created) {
+        console.error('Failed to create session:', createError?.message)
+        set({ sessionLoading: false })
+        return
+      }
+      sessionData = created
     }
 
     // 2. Load students in this group
@@ -148,14 +162,14 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
     const studs = (students ?? []) as Student[]
 
     // 3. Load any existing attendance for this session
-    const { data: existing } = await supabase
+    const { data: existingAttendance } = await supabase
       .from('attendance')
       .select('student_id, status, reason')
       .eq('session_id', sessionData.id)
 
     // Build records map — default to 'present' for new sessions
     const existingMap: Record<string, AttendanceEntry> = {}
-    ;(existing ?? []).forEach((a: any) => {
+    ;(existingAttendance ?? []).forEach((a: any) => {
       existingMap[a.student_id] = {
         student_id: a.student_id,
         status:     a.status,
@@ -232,10 +246,19 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
       reason:     r.reason || null,
     }))
 
+    // Delete existing records first then insert fresh — avoids upsert conflicts
+    await supabase
+      .from('attendance')
+      .delete()
+      .eq('session_id', activeSession.id)
+
     const { error } = await supabase
       .from('attendance')
-      .upsert(rows, { onConflict: 'session_id,student_id' })
+      .insert(rows)
 
+    if (error) {
+      console.error('Save attendance error:', error.message)
+    }
     set({ saving: false, saved: !error })
   },
 

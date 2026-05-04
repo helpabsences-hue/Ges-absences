@@ -16,7 +16,7 @@ const NAV_LABELS: Record<string, Record<Lang, string>> = {
   '/dashboard/admins':      { fr: 'Administrateurs', en: 'Administrators', ar: 'المديرون'        },
   '/dashboard/teachers':    { fr: 'Enseignants',     en: 'Teachers',       ar: 'الأساتذة'        },
   '/dashboard/students':    { fr: 'Étudiants',       en: 'Students',       ar: 'الطلاب'          },
-  '/dashboard/groups':      { fr: 'Groupes',         en: 'Groups',         ar: 'الفصول'          },
+  '/dashboard/groups':      { fr: 'Classes',         en: 'Classes',         ar: 'الفصول'          },
   '/dashboard/fields':      { fr: 'Filières',        en: 'Fields',         ar: 'الشُّعَب'        },
   '/dashboard/courses':     { fr: 'Matières',        en: 'Courses',        ar: 'المواد'          },
   '/dashboard/planning':    { fr: 'Planning',        en: 'Planning',       ar: 'الجدول الزمني'   },

@@ -75,7 +75,10 @@ export default function AttendanceModal() {
       {/* ── Backdrop ──────────────────────────────────── */}
       <div
         className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm"
-        onClick={closeSession}
+        onClick={() => {
+          // Allow closing — teacher can re-open and resume
+          closeSession()
+        }}
       />
 
       {/* ── Modal panel ───────────────────────────────── */}
