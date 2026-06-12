@@ -9,9 +9,12 @@ import { useStudentStore } from '@/stores/useStudentStore'
 import { useAuthStore } from '@/stores/useAuthStore'
 
 interface CSVRow {
-  name: string
-  massar_code: string
-  group_name: string
+  name:          string
+  massar_code:   string
+  group_name:    string
+  parent_name?:  string
+  parent_phone?: string
+  parent_email?: string
 }
 
 interface UploadResult {
@@ -60,7 +63,7 @@ export default function BulkStudentUpload() {
 
           const groupMap = new Map((groups ?? []).map(g => [g.name.trim().toLowerCase(), g.id]))
 
-          const toInsert: { name: string; massar_code: string; group_id: string; school_id: string }[] = []
+          const toInsert: { name: string; massar_code: string; group_id: string; school_id: string; parent_name?: string; parent_phone?: string; parent_email?: string }[] = []
           const skipped: string[]  = []
           const errors:  string[]  = []
 
@@ -80,7 +83,13 @@ export default function BulkStudentUpload() {
               return
             }
 
-            toInsert.push({ name, massar_code, group_id, school_id: profile.school_id! })
+            toInsert.push({
+              name, massar_code, group_id,
+              school_id:    profile.school_id!,
+              parent_name:  row.parent_name?.trim()  || undefined,
+              parent_phone: row.parent_phone?.trim() || undefined,
+              parent_email: row.parent_email?.trim() || undefined,
+            })
           })
 
           let inserted = 0
@@ -237,7 +246,7 @@ export default function BulkStudentUpload() {
       <div className="bg-slate-800/40 border border-slate-800 rounded-xl px-4 py-3">
         <p className="text-xs font-medium text-slate-500 mb-1.5">Expected CSV format</p>
         <code className="text-xs text-slate-400 block leading-relaxed">
-          name,massar_code,group_name<br/>
+          name,massar_code,group_name,parent_name,parent_phone,parent_email<br/>
           Ahmed Benali,J123456789,2BAC-1<br/>
           Sara Alaoui,K987654321,2BAC-2
         </code>

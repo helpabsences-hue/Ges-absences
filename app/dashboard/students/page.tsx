@@ -82,7 +82,7 @@ const UI: Record<Lang, {
   },
 }
 
-const EMPTY: AddStudentPayload = { name: '', massar_code: '', group_id: '' }
+const EMPTY: AddStudentPayload = { name: '', massar_code: '', group_id: '', parent_name: '', parent_email: '', parent_phone: '' }
 
 export default function StudentsPage() {
   const { students, loading, error, fetchStudents, addStudent, updateStudent, deleteStudent } = useStudentStore()
@@ -106,7 +106,7 @@ export default function StudentsPage() {
   const openAdd = () => { setShowUpload(false); setEditId(null); setForm(EMPTY); setFormError(''); setShowForm(true) }
   const openEdit = (s: StudentWithGroup) => {
     setShowUpload(false); setEditId(s.id)
-    setForm({ name: s.name, massar_code: s.massar_code, group_id: s.group_id ?? '' })
+    setForm({ name: s.name, massar_code: s.massar_code, group_id: s.group_id ?? '', parent_name: (s as any).parent_name ?? '', parent_email: (s as any).parent_email ?? '', parent_phone: (s as any).parent_phone ?? '' })
     setFormError(''); setShowForm(true)
   }
   const handleCancel = () => { setShowForm(false); setEditId(null); setForm(EMPTY); setFormError('') }
@@ -116,6 +116,7 @@ export default function StudentsPage() {
     if (!form.name.trim())        { setFormError(ui.errName);  return }
     if (!form.massar_code.trim()) { setFormError(ui.errMassar); return }
     if (!form.group_id)           { setFormError(ui.errGroup);  return }
+    if (!form.parent_phone?.trim()) { setFormError(lang === 'ar' ? 'رقم هاتف ولي الأمر مطلوب' : lang === 'fr' ? 'Le téléphone du parent est obligatoire' : 'Parent phone is required'); return }
     setSaving(true); setFormError('')
     if (editId) { await updateStudent(editId, form) }
     else { const id = await addStudent(form); if (!id) { setSaving(false); return } }
@@ -200,37 +201,87 @@ export default function StudentsPage() {
             {editId ? ui.editStudent : ui.newStudent}
           </h3>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <label className={`block text-xs font-medium text-slate-400 mb-1.5 ${isRtl ? 'text-right' : ''}`}>
-                  {ui.fullName} <span className="text-red-400">*</span>
-                </label>
-                <input type="text" value={form.name}
-                  onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))}
-                  placeholder={ui.fullNamePlaceholder} className={inputCls} />
+
+            {/* ── Student info ── */}
+            <div>
+              <p className={`text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 ${isRtl ? 'text-right' : ''}`}>
+                {lang === 'ar' ? 'معلومات الطالب' : lang === 'fr' ? 'Informations étudiant' : 'Student info'}
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className={`block text-xs font-medium text-slate-400 mb-1.5 ${isRtl ? 'text-right' : ''}`}>
+                    {ui.fullName} <span className="text-red-400">*</span>
+                  </label>
+                  <input type="text" value={form.name}
+                    onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                    placeholder={ui.fullNamePlaceholder} className={inputCls} />
+                </div>
+                <div>
+                  <label className={`block text-xs font-medium text-slate-400 mb-1.5 ${isRtl ? 'text-right' : ''}`}>
+                    {ui.massarCode} <span className="text-red-400">*</span>
+                  </label>
+                  <input type="text" value={form.massar_code}
+                    onChange={e => setForm(f => ({ ...f, massar_code: e.target.value.toUpperCase() }))}
+                    placeholder={ui.massarPlaceholder}
+                    className={`${inputCls} font-mono`} />
+                </div>
+                <div>
+                  <label className={`block text-xs font-medium text-slate-400 mb-1.5 ${isRtl ? 'text-right' : ''}`}>
+                    {ui.group} <span className="text-red-400">*</span>
+                  </label>
+                  <select value={form.group_id}
+                    onChange={e => setForm(f => ({ ...f, group_id: e.target.value }))}
+                    className={inputCls}>
+                    <option value="">{ui.selectGroup}</option>
+                    {groups.map(g => (
+                      <option key={g.id} value={g.id}>{g.name} ({ui.year} {g.year})</option>
+                    ))}
+                  </select>
+                </div>
               </div>
-              <div>
-                <label className={`block text-xs font-medium text-slate-400 mb-1.5 ${isRtl ? 'text-right' : ''}`}>
-                  {ui.massarCode} <span className="text-red-400">*</span>
-                </label>
-                <input type="text" value={form.massar_code}
-                  onChange={(e) => setForm(f => ({ ...f, massar_code: e.target.value.toUpperCase() }))}
-                  placeholder={ui.massarPlaceholder}
-                  className={`${inputCls} font-mono`} />
+            </div>
+
+            {/* ── Parent info ── */}
+            <div>
+              <p className={`text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 ${isRtl ? 'text-right' : ''}`}>
+                {lang === 'ar' ? 'معلومات ولي الأمر' : lang === 'fr' ? 'Informations parent' : 'Parent info'}
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className={`block text-xs font-medium text-slate-400 mb-1.5 ${isRtl ? 'text-right' : ''}`}>
+                    {lang === 'ar' ? 'اسم ولي الأمر' : lang === 'fr' ? 'Nom du parent' : 'Parent name'}
+                  </label>
+                  <input type="text" value={form.parent_name ?? ''}
+                    onChange={e => setForm(f => ({ ...f, parent_name: e.target.value }))}
+                    placeholder={lang === 'ar' ? 'محمد العمراني' : lang === 'fr' ? 'Mohamed Amrani' : 'Mohamed Amrani'}
+                    className={inputCls} />
+                </div>
+                <div>
+                  <label className={`block text-xs font-medium text-slate-400 mb-1.5 ${isRtl ? 'text-right' : ''}`}>
+                    {lang === 'ar' ? 'هاتف ولي الأمر' : lang === 'fr' ? 'Téléphone parent' : 'Parent phone'}{' '}
+                    <span className="text-red-400">*</span>
+                  </label>
+                  <input type="tel" value={form.parent_phone ?? ''}
+                    onChange={e => setForm(f => ({ ...f, parent_phone: e.target.value }))}
+                    placeholder="+212 6XX XXX XXX"
+                    className={inputCls} />
+                </div>
+                <div>
+                  <label className={`block text-xs font-medium text-slate-400 mb-1.5 ${isRtl ? 'text-right' : ''}`}>
+                    {lang === 'ar' ? 'بريد ولي الأمر' : lang === 'fr' ? 'Email parent' : 'Parent email'}{' '}
+                    <span className="text-slate-600 text-[10px]">{lang === 'fr' ? '(optionnel)' : lang === 'ar' ? '(اختياري)' : '(optional)'}</span>
+                  </label>
+                  <input type="email" value={form.parent_email ?? ''}
+                    onChange={e => setForm(f => ({ ...f, parent_email: e.target.value }))}
+                    placeholder={lang === 'ar' ? 'parent@email.com' : 'parent@email.com'}
+                    className={inputCls} />
+                </div>
               </div>
-              <div>
-                <label className={`block text-xs font-medium text-slate-400 mb-1.5 ${isRtl ? 'text-right' : ''}`}>
-                  {ui.group} <span className="text-red-400">*</span>
-                </label>
-                <select value={form.group_id}
-                  onChange={(e) => setForm(f => ({ ...f, group_id: e.target.value }))}
-                  className={inputCls}>
-                  <option value="">{ui.selectGroup}</option>
-                  {groups.map(g => (
-                    <option key={g.id} value={g.id}>{g.name} ({ui.year} {g.year})</option>
-                  ))}
-                </select>
-              </div>
+              <p className={`text-[11px] text-amber-400/80 mt-2 ${isRtl ? 'text-right' : ''}`}>
+                ⚠️ {lang === 'ar' ? 'سيُرسل بريد تنبيه تلقائياً إلى ولي الأمر عند تجاوز حد الغيابات المحدد.'
+                  : lang === 'fr' ? "Un email d'alerte sera envoyé automatiquement au parent quand le seuil d'absences est atteint."
+                  : 'An alert email will be sent automatically to the parent when the absence threshold is reached.'}
+              </p>
             </div>
 
             {formError && <p className="text-xs text-red-400">{formError}</p>}
@@ -312,7 +363,7 @@ export default function StudentsPage() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-slate-800">
-                  {[ui.colName, ui.colMassar, ui.colGroup, ''].map((h, i) => (
+                  {[ui.colName, ui.colMassar, ui.colGroup, lang === 'fr' ? 'Parent' : lang === 'ar' ? 'ولي الأمر' : 'Parent', ''].map((h, i) => (
                     <th key={i}
                       className={`px-4 sm:px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider
                         ${i === 3 ? '' : isRtl ? 'text-right' : 'text-left'}`}>
@@ -331,6 +382,7 @@ export default function StudentsPage() {
                             {student.name.charAt(0).toUpperCase()}
                           </span>
                         </div>
+
                         <span className="text-sm font-medium text-white">{student.name}</span>
                       </div>
                     </td>
@@ -342,6 +394,26 @@ export default function StudentsPage() {
                         ? <span className="text-xs bg-slate-800 text-slate-300 font-medium px-2 py-1 rounded-lg">{student.groups.name}</span>
                         : <span className="text-slate-600 text-sm">{ui.unassigned}</span>
                       }
+                    </td>
+                    <td className="px-4 sm:px-5 py-3 sm:py-4">
+                      <div className="space-y-1">
+                        {(student as any).parent_name && (
+                          <p className="text-xs text-slate-300 font-medium">{(student as any).parent_name}</p>
+                        )}
+                        {(student as any).parent_phone && (
+                          <p className="text-xs text-slate-500 flex items-center gap-1">
+                            📞 {(student as any).parent_phone}
+                          </p>
+                        )}
+                        {(student as any).parent_email && (
+                          <p className="text-xs text-slate-500 flex items-center gap-1">
+                            ✉️ {(student as any).parent_email}
+                          </p>
+                        )}
+                        {!(student as any).parent_phone && !(student as any).parent_email && (
+                          <span className="text-xs text-slate-700">—</span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 sm:px-5 py-3 sm:py-4">
                       <div className={`flex items-center gap-1 opacity-0 group-hover:opacity-100 transition

@@ -34,7 +34,7 @@ interface AttendanceState {
 
   // Actions
   fetchSchedule:        () => Promise<void>
-  subscribeToSchedule:  (uid: string) => () => void  // returns unsubscribe fn
+  subscribeToSchedule:  (uid: string) => () => void
   startSession:    (slot: TeacherPlanningFull) => Promise<void>
   setStatus:       (studentId: string, status: AttendanceStatus) => void
   setReason:       (studentId: string, reason: string) => void
@@ -64,26 +64,23 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
   saving:          false,
   saved:           false,
 
-  // ── Realtime subscription for schedule changes ────────
+  // ── Load teacher's full schedule ───────────────────────
   subscribeToSchedule: (uid: string) => {
     const supabase = createClient()
     const channel = supabase
-      .channel(`teacher_planning_${uid}`)
+      .channel('teacher_planning_' + uid)
       .on('postgres_changes', {
         event:  '*',
         schema: 'public',
         table:  'teacher_planning',
-        filter: `teacher_id=eq.${uid}`,
+        filter: 'teacher_id=eq.' + uid,
       }, () => {
         get().fetchSchedule()
       })
       .subscribe()
-
-    // Return unsubscribe function
     return () => { supabase.removeChannel(channel) }
   },
 
-  // ── Load teacher's full schedule ───────────────────────
   fetchSchedule: async () => {
     set({ scheduleLoading: true })
     const supabase = createClient()
@@ -104,15 +101,8 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
 
     if (error || !data) { set({ scheduleLoading: false }); return }
 
-    const todayDate = TODAY_DATE()
-    const todayName = TODAY_NAME()
-    const all = data as TeacherPlanningFull[]
-
-    // Today's slots: weekly slots for today's day name OR special sessions for today's date
-    const today = all.filter((s: any) => {
-      if (s.session_date) return s.session_date === todayDate  // special session
-      return s.day === todayName                                // weekly recurring
-    })
+    const all   = data as TeacherPlanningFull[]
+    const today = all.filter((s) => s.day === TODAY_NAME())
 
     set({ allSlots: all, todaySlots: today, scheduleLoading: false })
   },
@@ -123,33 +113,19 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
     const supabase = createClient()
     const date = TODAY_DATE()
 
-    // 1. Try to find existing session first (resume / modify flow)
-    let sessionData: any = null
-
-    const { data: existing } = await supabase
+    // 1. Upsert session row
+    const { data: sessionData, error: sessionError } = await supabase
       .from('class_sessions')
+      .upsert(
+        { planning_id: slot.id, session_date: date },
+        { onConflict: 'planning_id,session_date' }
+      )
       .select()
-      .eq('planning_id', slot.id)
-      .eq('session_date', date)
       .single()
 
-    if (existing) {
-      // Session already exists — resume or modify it
-      sessionData = existing
-    } else {
-      // Create new session
-      const { data: created, error: createError } = await supabase
-        .from('class_sessions')
-        .insert({ planning_id: slot.id, session_date: date })
-        .select()
-        .single()
-
-      if (createError || !created) {
-        console.error('Failed to create session:', createError?.message)
-        set({ sessionLoading: false })
-        return
-      }
-      sessionData = created
+    if (sessionError || !sessionData) {
+      set({ sessionLoading: false })
+      return
     }
 
     // 2. Load students in this group
@@ -162,14 +138,14 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
     const studs = (students ?? []) as Student[]
 
     // 3. Load any existing attendance for this session
-    const { data: existingAttendance } = await supabase
+    const { data: existing } = await supabase
       .from('attendance')
       .select('student_id, status, reason')
       .eq('session_id', sessionData.id)
 
     // Build records map — default to 'present' for new sessions
     const existingMap: Record<string, AttendanceEntry> = {}
-    ;(existingAttendance ?? []).forEach((a: any) => {
+    ;(existing ?? []).forEach((a: any) => {
       existingMap[a.student_id] = {
         student_id: a.student_id,
         status:     a.status,
@@ -246,19 +222,28 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
       reason:     r.reason || null,
     }))
 
-    // Delete existing records first then insert fresh — avoids upsert conflicts
-    await supabase
-      .from('attendance')
-      .delete()
-      .eq('session_id', activeSession.id)
+    // Delete all existing records for this session then reinsert
+    // This guarantees modifications are saved correctly
+    await supabase.from('attendance').delete().eq('session_id', activeSession.id)
+    const { error } = await supabase.from('attendance').insert(rows)
 
-    const { error } = await supabase
-      .from('attendance')
-      .insert(rows)
+    if (error) console.error('Save error:', error.message)
 
-    if (error) {
-      console.error('Save attendance error:', error.message)
+    // Auto-refresh schedule so session status updates immediately
+    if (!error) {
+      setTimeout(() => get().fetchSchedule(), 400)
+
+      // Trigger absence alert check
+      const profile = (await import('@/stores/useAuthStore')).useAuthStore.getState().profile
+      if (profile?.school_id) {
+        fetch('/api/check-alerts', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ school_id: profile.school_id }),
+        }).catch(err => console.error('Alert check error:', err))
+      }
     }
+
     set({ saving: false, saved: !error })
   },
 

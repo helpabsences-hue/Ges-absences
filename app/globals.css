@@ -115,3 +115,34 @@ input[type="time"]         { color-scheme: dark; }
 
 /* ── RTL support ────────────────────────────────────────── */
 [dir="rtl"] { font-family: 'Segoe UI', 'Arial', sans-serif; }
+/* ── Custom scrollbar (dark theme) ─────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #334155;   /* slate-700 */
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;   /* slate-600 */
+}
+
+/* ── Date/time input styling on dark bg ─────────────────── */
+input[type="date"],
+input[type="time"] {
+  color-scheme: dark;
+}
+
+/* ── Focus ring reset ───────────────────────────────────── */
+*:focus-visible {
+  outline: 2px solid #3b82f6;  /* blue-500 */
+  outline-offset: 2px;
+}
+
+/* Hide scrollbar but keep scrollable */
+.scrollbar-none::-webkit-scrollbar { display: none; }
+.scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }

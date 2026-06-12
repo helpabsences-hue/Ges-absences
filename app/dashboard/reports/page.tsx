@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic'
 // app/dashboard/reports/page.tsx — lean orchestrator (~120 lines)
 
 import { useEffect, useState, useCallback } from 'react'
+import * as XLSX from 'xlsx'
 import { createClient }     from '@/lib/supabase/client'
 import { useGroupStore }    from '@/stores/useGroupStore'
 import { useSettingsStore } from '@/stores/useSettingsStore'
@@ -27,7 +28,7 @@ const UI: Record<Lang, Record<string, string>> = {
     colType: 'Type', colReason: 'Raison', colState: 'État',
     atRisk: 'À risque', records: 'relevés', hours: 'h',
     allFilter: 'Toutes', absentsFilter: 'Absences', latesFilter: 'Retards',
-    exportCsv: 'Télécharger CSV',
+    exportCsv: 'Télécharger Excel',
     noRecords: 'Aucun enregistrement', adjustFilters: "Essayez d'ajuster les filtres",
     justified: 'Justifiée', notJustified: 'Non justifiée',
     absentBadge: 'Absent', lateBadge: 'Retard',
@@ -45,7 +46,7 @@ const UI: Record<Lang, Record<string, string>> = {
     colType: 'Type', colReason: 'Reason', colState: 'State',
     atRisk: 'At risk', records: 'records', hours: 'h',
     allFilter: 'All', absentsFilter: 'Absences', latesFilter: 'Lates',
-    exportCsv: 'Download CSV',
+    exportCsv: 'Download Excel',
     noRecords: 'No records', adjustFilters: 'Try adjusting your filters',
     justified: 'Justified', notJustified: 'Not justified',
     absentBadge: 'Absent', lateBadge: 'Late',
@@ -63,7 +64,7 @@ const UI: Record<Lang, Record<string, string>> = {
     colType: 'النوع', colReason: 'السبب', colState: 'الحالة',
     atRisk: 'في خطر', records: 'سجلات', hours: 'س',
     allFilter: 'الكل', absentsFilter: 'الغيابات', latesFilter: 'التأخيرات',
-    exportCsv: 'تنزيل CSV',
+    exportCsv: 'تنزيل Excel',
     noRecords: 'لا توجد سجلات', adjustFilters: 'جرّب تعديل الفلاتر',
     justified: 'مبرّر', notJustified: 'غير مبرّر',
     absentBadge: 'غائب', lateBadge: 'متأخر',
@@ -126,7 +127,6 @@ export default function ReportsPage() {
       late:     filtered.filter((r: any) => r.status === 'late').length,
     })
 
-    // Group stats
     const gMap: Record<string, GroupStat> = {}
     valid.forEach((r: any) => {
       const g = r.class_sessions?.teacher_planning?.groups; if (!g) return
@@ -138,7 +138,6 @@ export default function ReportsPage() {
     })
     setGroupStats(Object.values(gMap).map(g => ({ ...g, rate: g.total > 0 ? Math.round(((g.present+g.late)/g.total)*100) : 0 })).sort((a,b) => a.rate-b.rate))
 
-    // Student stats
     const sMap: Record<string, StudentStat> = {}
     filtered.forEach((r: any) => {
       const s = r.students; if (!s) return
@@ -150,7 +149,6 @@ export default function ReportsPage() {
     })
     setStudentStats(Object.values(sMap).map(s => ({ ...s, rate: s.total > 0 ? Math.round(((s.present+s.late)/s.total)*100) : 0 })).sort((a,b) => a.rate-b.rate))
 
-    // Reasons pie
     const rMap: Record<string, number> = {}
     filtered.filter((r: any) => r.status === 'absent').forEach((r: any) => {
       const key = r.reason?.trim() || 'Non spécifié'
@@ -158,7 +156,6 @@ export default function ReportsPage() {
     })
     setReasonData(Object.entries(rMap).map(([name, value], i) => ({ name, value, fill: PIE_COLORS[i % PIE_COLORS.length] })))
 
-    // Absence rows
     setAbsenceRows(
       filtered.filter((r: any) => r.status === 'absent' || r.status === 'late')
         .map((r: any) => {
@@ -180,22 +177,60 @@ export default function ReportsPage() {
 
   const filteredAbsences = absenceRows.filter(r => filterType === 'all' || r.status === filterType)
 
+  // ── Excel Export (replaces CSV) ───────────────────────
   const handleExportCsv = () => {
-    const esc = (v: string) => `"${String(v).replace(/"/g, '""')}"`
-    const headers = [ui.colStudent, 'Massar', ui.colClass, ui.colCourse, ui.colDate, ui.colType, ui.colReason, ui.colState, ui.colHours].map(esc).join(',')
-    const rowLines = filteredAbsences.map(r => [
-      r.studentName, r.massarCode, r.groupName, r.courseName,
-      `${new Date(r.date).toLocaleDateString(dateLocale, { day:'numeric', month:'short', year:'numeric' })} ${r.timeSlot}`,
+    const wb = XLSX.utils.book_new()
+
+    // Sheet 1 — Absence details (matches exactly the table the user sees)
+    const detailHeaders = [
+      ui.colStudent, 'Massar', ui.colClass, ui.colCourse,
+      ui.colDate, ui.colType, ui.colReason, ui.colState, ui.colHours
+    ]
+    const detailRows = filteredAbsences.map(r => [
+      r.studentName,
+      r.massarCode,
+      r.groupName,
+      r.courseName,
+      new Date(r.date).toLocaleDateString(dateLocale, { day: 'numeric', month: 'short', year: 'numeric' }) + ' ' + r.timeSlot,
       r.status === 'absent' ? ui.absentBadge : ui.lateBadge,
-      r.reason || '—', r.justified ? ui.justified : ui.notJustified,
+      r.reason || '—',
+      r.justified ? ui.justified : ui.notJustified,
       fmtHours(r.durationMinutes, ui.hours),
-    ].map(esc).join(','))
-    const csv  = '\uFEFF' + [headers, ...rowLines].join('\r\n')
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    const url  = URL.createObjectURL(blob)
-    const a    = document.createElement('a')
-    a.href = url; a.download = `rapport-absences-${dateFrom}-${dateTo}.csv`; a.click()
-    URL.revokeObjectURL(url)
+    ])
+    const wsDetails = XLSX.utils.aoa_to_sheet([detailHeaders, ...detailRows])
+    wsDetails['!cols'] = [
+      { wch: 24 }, { wch: 14 }, { wch: 12 }, { wch: 16 },
+      { wch: 28 }, { wch: 10 }, { wch: 16 }, { wch: 12 }, { wch: 10 }
+    ]
+    XLSX.utils.book_append_sheet(wb, wsDetails, lang === 'ar' ? 'التفاصيل' : lang === 'en' ? 'Details' : 'Détails')
+
+    // Sheet 2 — Student summary
+    const studentHeaders = [ui.colStudent, 'Massar', ui.colClass, 'Total', ui.colPresent, ui.colAbsent, ui.colLate, ui.colHours, ui.colRate]
+    const studentRows = studentStats.map(s => [
+      s.student_name, s.massar_code, s.group_name,
+      s.total, s.present, s.absent, s.late,
+      fmtHours(s.absenceMinutes, ui.hours),
+      s.rate + '%'
+    ])
+    const wsStudents = XLSX.utils.aoa_to_sheet([studentHeaders, ...studentRows])
+    wsStudents['!cols'] = [
+      { wch: 24 }, { wch: 14 }, { wch: 12 }, { wch: 8 },
+      { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 10 }
+    ]
+    XLSX.utils.book_append_sheet(wb, wsStudents, lang === 'ar' ? 'الطلاب' : lang === 'en' ? 'Students' : 'Étudiants')
+
+    // Sheet 3 — Group summary
+    const groupHeaders = [ui.colGroup, ui.colPresent, ui.colAbsent, ui.colLate, ui.colHours, ui.colRate]
+    const groupRows = groupStats.map(g => [
+      g.group_name, g.present, g.absent, g.late,
+      fmtHours(g.absenceMinutes, ui.hours),
+      g.rate + '%'
+    ])
+    const wsGroups = XLSX.utils.aoa_to_sheet([groupHeaders, ...groupRows])
+    wsGroups['!cols'] = [{ wch: 14 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 10 }]
+    XLSX.utils.book_append_sheet(wb, wsGroups, lang === 'ar' ? 'الفصول' : lang === 'en' ? 'Groups' : 'Groupes')
+
+    XLSX.writeFile(wb, `rapport-absences-${dateFrom}-${dateTo}.xlsx`)
   }
 
   return (

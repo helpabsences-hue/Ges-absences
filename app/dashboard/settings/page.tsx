@@ -1,12 +1,10 @@
 'use client'
-
 export const dynamic = 'force-dynamic'
-// app/dashboard/settings/page.tsx
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSettingsStore, type Theme, type Language } from '@/stores/useSettingsStore'
-import { useSettingsStore as useSettings } from '@/stores/useSettingsStore'
 import EditProfileSection from '@/components/shared/EditProfileSection'
+import { createClient } from '@/lib/supabase/client'
 
 type Lang = 'fr' | 'en' | 'ar'
 
@@ -45,15 +43,49 @@ const UI: Record<Lang, {
 
 export default function SettingsPage() {
   const { theme, language, setTheme, setLanguage } = useSettingsStore()
-  const [saved, setSaved] = useState(false)
+
+  const [saved,       setSaved]       = useState(false)
+  const [threshold,   setThreshold]   = useState(3)
+  const [threshSaved, setThreshSaved] = useState(false)
+  const [threshLoad,  setThreshLoad]  = useState(false)
+  const [schoolId,    setSchoolId]    = useState<string | null>(null)
 
   const lang  = (language || 'fr') as Lang
   const ui    = UI[lang]
   const isRtl = lang === 'ar'
 
+  // Load school threshold on mount
+  useEffect(() => {
+    const load = async () => {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data: profile } = await supabase
+        .from('profiles').select('school_id').eq('id', user.id).single()
+      if (!profile?.school_id) return
+      setSchoolId(profile.school_id)
+      const { data: school } = await supabase
+        .from('schools').select('absence_threshold').eq('id', profile.school_id).single()
+      if (school?.absence_threshold) setThreshold(school.absence_threshold)
+    }
+    load()
+  }, [])
+
   const flash = () => { setSaved(true); setTimeout(() => setSaved(false), 2000) }
   const handleTheme    = (v: Theme)    => { setTheme(v);    flash() }
   const handleLanguage = (v: Language) => { setLanguage(v); flash() }
+
+  const saveThreshold = async () => {
+    if (!schoolId) return
+    setThreshLoad(true)
+    const supabase = createClient()
+    await supabase.from('schools')
+      .update({ absence_threshold: threshold })
+      .eq('id', schoolId)
+    setThreshLoad(false)
+    setThreshSaved(true)
+    setTimeout(() => setThreshSaved(false), 2000)
+  }
 
   return (
     <div className={`max-w-2xl mx-auto space-y-4 sm:space-y-6 ${isRtl ? 'text-right' : ''}`}>
@@ -68,7 +100,7 @@ export default function SettingsPage() {
           <div className={`flex items-center gap-2 bg-green-500/10 border border-green-500/20
             text-green-400 text-xs font-medium px-3 py-2 rounded-xl ${isRtl ? 'flex-row-reverse' : ''}`}>
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/>
             </svg>
             {ui.saved}
           </div>
@@ -94,7 +126,7 @@ export default function SettingsPage() {
               {theme === val && (
                 <span className="absolute top-2 right-2 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
                   <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/>
                   </svg>
                 </span>
               )}
@@ -130,12 +162,71 @@ export default function SettingsPage() {
               {language === code && (
                 <span className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center shrink-0">
                   <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/>
                   </svg>
                 </span>
               )}
             </button>
           ))}
+        </div>
+      </section>
+
+      {/* Absence Alert Threshold */}
+      <section className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 space-y-4">
+        <div>
+          <h3 className="text-sm font-semibold text-white">
+            {lang === 'ar' ? 'تنبيهات الغياب' : lang === 'fr' ? "Alertes d'absences" : 'Absence Alerts'}
+          </h3>
+          <p className="text-xs text-slate-500 mt-0.5">
+            {lang === 'ar'
+              ? 'أرسل تنبيهاً لولي الأمر عند بلوغ هذا العدد من الغيابات'
+              : lang === 'fr'
+              ? "Envoyer une alerte aux parents quand l'étudiant atteint ce nombre d'absences"
+              : 'Send an alert to parents when student reaches this number of absences'}
+          </p>
+        </div>
+
+        <div className={`flex items-center gap-4 ${isRtl ? 'flex-row-reverse' : ''}`}>
+          <div className="flex items-center gap-3 bg-slate-800 border border-slate-700 rounded-xl px-4 py-3">
+            <button
+              onClick={() => setThreshold(t => Math.max(1, t - 1))}
+              className="w-7 h-7 rounded-lg bg-slate-700 hover:bg-slate-600 text-white flex items-center justify-center transition font-bold text-lg">
+              −
+            </button>
+            <span className="text-xl font-bold text-white w-8 text-center">{threshold}</span>
+            <button
+              onClick={() => setThreshold(t => Math.min(20, t + 1))}
+              className="w-7 h-7 rounded-lg bg-slate-700 hover:bg-slate-600 text-white flex items-center justify-center transition font-bold text-lg">
+              +
+            </button>
+          </div>
+          <span className="text-sm text-slate-400">
+            {lang === 'ar' ? 'غياب' : 'absence(s)'}
+          </span>
+          <button
+            onClick={saveThreshold}
+            disabled={threshLoad}
+            className="ml-auto bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition">
+            {threshLoad
+              ? '…'
+              : threshSaved
+              ? '✓ ' + (lang === 'ar' ? 'تم الحفظ' : lang === 'fr' ? 'Enregistré' : 'Saved')
+              : lang === 'ar' ? 'حفظ' : lang === 'fr' ? 'Enregistrer' : 'Save'}
+          </button>
+        </div>
+
+        <div className="flex items-start gap-2.5 bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3">
+          <svg className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <p className="text-xs text-amber-300">
+            {lang === 'ar'
+              ? 'سيتم إرسال البريد الإلكتروني تلقائياً إذا كان لولي الأمر عنوان بريد إلكتروني مسجل.'
+              : lang === 'fr'
+              ? "L'email sera envoyé automatiquement si le parent a une adresse email enregistrée dans la fiche étudiant."
+              : 'Email will be sent automatically if the parent has an email address recorded in the student profile.'}
+          </p>
         </div>
       </section>
 

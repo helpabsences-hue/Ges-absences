@@ -58,6 +58,9 @@ export interface Student {
   massar_code: string
   group_id: string | null
   school_id: string
+  parent_name?:  string | null
+  parent_phone?: string | null
+  parent_email?: string | null
 }
 
 export interface StudentWithGroup extends Student {
@@ -160,9 +163,12 @@ export interface AcceptInvitePayload {
 }
 
 export interface AddStudentPayload {
-  name: string
-  massar_code: string
-  group_id: string
+  name:         string
+  massar_code:  string
+  group_id:     string
+  parent_name?: string
+  parent_email?: string
+  parent_phone?: string
 }
 
 export interface AddGroupPayload {
@@ -183,11 +189,11 @@ export interface AddCoursePayload {
 }
 
 export interface AddPlanningPayload {
-  teacher_id:   string
-  group_id:     string
-  course_id:    string
-  day:          Day
-  start_time:   string
-  end_time:     string
-  session_date?: string  // optional — if set, this is a one-time special session
+  teacher_id: string
+  group_id: string
+  course_id: string
+  day: Day
+  start_time: string
+  end_time: string
+  session_date?: string
 }
