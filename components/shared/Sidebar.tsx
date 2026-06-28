@@ -109,7 +109,7 @@ export default function Sidebar() {
         </Link>
 
         <div className={`bg-slate-800/50 border border-slate-700 rounded-xl px-3 py-2 ${isRtl ? 'text-right' : ''}`}>
-          <span className="text-[9px] font-bold uppercase tracking-widest text-blue-400 block">
+          <span className="text-[9px] font-bold uppercase tracking-widest text-blue-700 block">
             {ui.school}
           </span>
           <span className="text-xs font-semibold text-white truncate block mt-0.5">
@@ -137,7 +137,7 @@ export default function Sidebar() {
                   ? 'bg-blue-600 text-white shadow-sm shadow-blue-900/40'
                   : isAI
                     ? 'text-violet-400 hover:bg-violet-500/10 hover:text-violet-300'
-                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                    : 'text-slate-400 hover:bg-blue-400 hover:text-white'
                 }`}
             >
               <span className={`shrink-0 transition-colors
@@ -161,7 +161,7 @@ export default function Sidebar() {
       <div className="shrink-0 px-2 py-2 border-t border-slate-800">
         <button onClick={handleSignOut}
           className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-[12px] font-medium
-            text-slate-500 hover:bg-red-500/10 hover:text-red-400 transition-all
+            text-red-500 hover:bg-red-300 hover:text-red-400 transition-all
             ${isRtl ? 'flex-row-reverse' : ''}`}>
           <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}

@@ -27,8 +27,11 @@ export async function POST(request: NextRequest) {
   const { type, payload } = await request.json()
 
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (!user) {
+    console.error('AI route auth error:', authError?.message ?? 'no user found')
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
 
   const { data: profile } = await supabase
     .from('profiles').select('role, school_id, name').eq('id', user.id).single()
@@ -52,22 +55,31 @@ export async function POST(request: NextRequest) {
 }
 
 async function fetchData(supabase: any, school_id: string) {
+  // attendance has no school_id column — student_id references the
+  // students table (not profiles). Filter by school_id in JS after
+  // fetching, using the nested school_id from students or teacher_planning.
   const { data } = await supabase
     .from('attendance')
     .select(`
       status,
-      profiles!attendance_student_id_fkey ( name ),
+      students ( name, school_id ),
       class_sessions (
         session_date,
         teacher_planning (
+          school_id,
           courses ( name ),
           groups  ( name, year )
         )
       )
     `)
-    .eq('school_id', school_id)
-    .limit(500)
-  return (data ?? []) as any[]
+    .limit(1000)
+
+  const filtered = (data ?? []).filter((r: any) =>
+    r.students?.school_id === school_id ||
+    r.class_sessions?.teacher_planning?.school_id === school_id
+  )
+
+  return filtered as any[]
 }
 
 function buildStats(rows: any[]) {
@@ -78,7 +90,7 @@ function buildStats(rows: any[]) {
 
   const byStudent: Record<string, { name: string; absent: number; late: number; total: number; days: string[] }> = {}
   for (const r of rows) {
-    const name = r.profiles?.name ?? 'Inconnu'
+    const name = r.students?.name ?? 'Inconnu'
     if (!byStudent[name]) byStudent[name] = { name, absent: 0, late: 0, total: 0, days: [] }
     byStudent[name].total++
     if (r.status === 'absent') {
@@ -178,29 +190,101 @@ async function detectPatterns(supabase: any, school_id: string, payload: any) {
 
 async function predictRisk(supabase: any, school_id: string, payload: any) {
   const { lang = 'fr' } = payload
+  const langStr = lang === 'ar' ? 'arabe' : lang === 'en' ? 'anglais' : 'français'
+  const ML_API_URL = process.env.ML_API_URL
+
+  // ── Try the trained Random Forest model first ────────────
+  if (ML_API_URL) {
+    try {
+      const res = await fetch(ML_API_URL + '/predict', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ school_id }),
+        signal:  AbortSignal.timeout(25000),
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+
+        if (data.success) {
+          const highRisk = (data.students || []).filter((s: any) => s.risk_level === 'high').slice(0, 5)
+
+          const prompt = [
+            'Tu es un conseiller pédagogique. Voici les résultats du modèle ML de prédiction de décrochage scolaire.',
+            'Donne des recommandations concrètes pour les étudiants à risque élevé. Réponds en ' + langStr + '.',
+            '',
+            'Résumé: ' + data.at_risk_high + ' étudiants à risque élevé sur ' + data.total,
+            'Top étudiants à risque: ' + highRisk.map((s: any) =>
+              s.student_name + ' (' + s.absence_rate + '% abs, score: ' + s.risk_score + '%)'
+            ).join(', '),
+          ].join('\n')
+
+          const explanation = await ask(prompt)
+
+          return NextResponse.json({
+            prediction:     explanation,
+            students:       data.students,
+            total:          data.total,
+            at_risk_high:   data.at_risk_high,
+            at_risk_medium: data.at_risk_medium,
+            source:         'ml_model',
+          })
+        }
+      } else {
+        const errText = await res.text()
+        console.error('ML API responded with error:', res.status, errText)
+      }
+    } catch (err: any) {
+      console.error('ML API call failed:', err.message)
+    }
+  } else {
+    console.error('ML_API_URL env var is not set — using Groq fallback')
+  }
+
+  // ── Fallback: Groq, formatted to match the same shape ─────
   const rows = await fetchData(supabase, school_id)
   const { byStudent } = buildStats(rows)
 
-  const students = Object.values(byStudent)
-    .map(s => ({
-      name:        s.name,
-      absenceRate: s.total > 0 ? Math.round(s.absent / s.total * 100) : 0,
-      absences:    s.absent,
-      lates:       s.late,
-      sessions:    s.total,
-    }))
-    .filter(s => s.absenceRate > 15)
-    .sort((a, b) => b.absenceRate - a.absenceRate)
-    .slice(0, 15)
+  const allStudents = Object.values(byStudent).map((s: any) => {
+    const absenceRate = s.total > 0 ? Math.round(s.absent / s.total * 100) : 0
+    const risk_level  = absenceRate >= 30 ? 'high' : absenceRate >= 15 ? 'medium' : 'low'
+    return {
+      student_id:      s.name,
+      student_name:    s.name,
+      massar_code:     '',
+      group_name:      '',
+      absence_rate:    absenceRate,
+      late_rate:       s.total > 0 ? Math.round(s.late / s.total * 100) : 0,
+      attendance_rate: s.total > 0 ? Math.round((s.total - s.absent - s.late) / s.total * 100) : 0,
+      risk_score:      absenceRate,
+      risk_level,
+      absences:        s.absent,
+      total_sessions:  s.total,
+    }
+  }).sort((a: any, b: any) => b.risk_score - a.risk_score)
 
-  const langStr = lang === 'ar' ? 'arabe' : lang === 'en' ? 'anglais' : 'français'
-  const prompt  = [
+  const atRiskHigh   = allStudents.filter((s: any) => s.risk_level === 'high').length
+  const atRiskMedium = allStudents.filter((s: any) => s.risk_level === 'medium').length
+  const top15 = allStudents.filter((s: any) => s.absence_rate > 15).slice(0, 15)
+
+  const prompt = [
     'Tu es un conseiller pédagogique. Analyse ces étudiants et prédi lesquels sont à risque.',
     'Pour chacun donne des recommandations concrètes. Réponds en ' + langStr + '.',
     '',
-    JSON.stringify(students, null, 2),
+    JSON.stringify(top15.map((s: any) => ({
+      name: s.student_name, absenceRate: s.absence_rate,
+      absences: s.absences, sessions: s.total_sessions,
+    })), null, 2),
   ].join('\n')
 
   const prediction = await ask(prompt)
-  return NextResponse.json({ prediction, students })
+
+  return NextResponse.json({
+    prediction,
+    students:       allStudents,
+    total:          allStudents.length,
+    at_risk_high:   atRiskHigh,
+    at_risk_medium: atRiskMedium,
+    source:         'groq_fallback',
+  })
 }
