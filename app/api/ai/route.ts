@@ -1,11 +1,12 @@
 // app/api/ai/route.ts
+export const maxDuration = 60
+
 import Groq from 'groq-sdk'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse, type NextRequest } from 'next/server'
 
 const MODEL = 'llama-3.3-70b-versatile'
 
-// Lazy init — avoids crash at build time when env var is missing
 function getGroq() {
   return new Groq({ apiKey: process.env.GROQ_API_KEY! })
 }
@@ -54,19 +55,19 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// ── FETCH DATA — attendance + students + sessions + courses + groups ──
 async function fetchData(supabase: any, school_id: string) {
-  // attendance has no school_id column — student_id references the
-  // students table (not profiles). Filter by school_id in JS after
-  // fetching, using the nested school_id from students or teacher_planning.
   const { data } = await supabase
     .from('attendance')
     .select(`
       status,
-      students ( name, school_id ),
+      students ( name, school_id, massar_code ),
       class_sessions (
         session_date,
         teacher_planning (
           school_id,
+          start_time,
+          end_time,
           courses ( name ),
           groups  ( name, year )
         )
@@ -82,13 +83,24 @@ async function fetchData(supabase: any, school_id: string) {
   return filtered as any[]
 }
 
-function buildStats(rows: any[]) {
+// ── FETCH ALERTS — how many alerts sent and to whom ──────────────────
+async function fetchAlerts(supabase: any, school_id: string) {
+  const { data } = await supabase
+    .from('absence_alerts')
+    .select('student_id, sent_at, absences, threshold')
+    .eq('school_id', school_id)
+  return (data ?? []) as any[]
+}
+
+// ── BUILD STATS — aggregate all data for prompt injection ─────────────
+function buildStats(rows: any[], alerts: any[] = []) {
   const total    = rows.length
   const absents  = rows.filter(r => r.status === 'absent').length
   const lates    = rows.filter(r => r.status === 'late').length
   const presents = rows.filter(r => r.status === 'present').length
 
-  const byStudent: Record<string, { name: string; absent: number; late: number; total: number; days: string[] }> = {}
+  // Per student
+  const byStudent: Record<string, any> = {}
   for (const r of rows) {
     const name = r.students?.name ?? 'Inconnu'
     if (!byStudent[name]) byStudent[name] = { name, absent: 0, late: 0, total: 0, days: [] }
@@ -104,51 +116,201 @@ function buildStats(rows: any[]) {
     if (r.status === 'late') byStudent[name].late++
   }
 
-  return { total, absents, lates, presents, byStudent }
+  // Per group (class)
+  const byGroup: Record<string, any> = {}
+  for (const r of rows) {
+    const group = r.class_sessions?.teacher_planning?.groups?.name ?? 'Inconnu'
+    if (!byGroup[group]) byGroup[group] = { total: 0, absent: 0 }
+    byGroup[group].total++
+    if (r.status === 'absent') byGroup[group].absent++
+  }
+
+  // Per course (subject)
+  const byCourse: Record<string, any> = {}
+  for (const r of rows) {
+    const course = r.class_sessions?.teacher_planning?.courses?.name ?? 'Inconnu'
+    if (!byCourse[course]) byCourse[course] = { total: 0, absent: 0 }
+    byCourse[course].total++
+    if (r.status === 'absent') byCourse[course].absent++
+  }
+
+  // Per day of week
+  const byDay: Record<string, { total: number; absent: number }> = {}
+  for (const r of rows) {
+    const date = r.class_sessions?.session_date
+    if (!date) continue
+    const day = new Date(date).toLocaleDateString('en', { weekday: 'long' })
+    if (!byDay[day]) byDay[day] = { total: 0, absent: 0 }
+    byDay[day].total++
+    if (r.status === 'absent') byDay[day].absent++
+  }
+  const topDays = Object.entries(byDay)
+    .map(([day, s]) => ({
+      day, rate: s.total > 0 ? Math.round(s.absent / s.total * 100) : 0,
+      absences: s.absent, total: s.total,
+    }))
+    .sort((a, b) => b.rate - a.rate)
+
+  // Students absent together (same session/group)
+  const absencesBySession: Record<string, string[]> = {}
+  for (const r of rows) {
+    if (r.status !== 'absent') continue
+    const date  = r.class_sessions?.session_date ?? 'unknown'
+    const group = r.class_sessions?.teacher_planning?.groups?.name ?? 'unknown'
+    const key   = date + '_' + group
+    if (!absencesBySession[key]) absencesBySession[key] = []
+    absencesBySession[key].push(r.students?.name ?? 'Inconnu')
+  }
+  const groupAbsences = Object.entries(absencesBySession)
+    .filter(([_, names]) => names.length >= 3)
+    .map(([key, names]) => {
+      const [date, group] = key.split('_')
+      return { date, group, students: names, count: names.length }
+    })
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 3)
+
+  // Top groups by absence rate
+  const topGroups = Object.entries(byGroup)
+    .map(([name, s]: any) => ({
+      name,
+      rate: s.total > 0 ? Math.round(s.absent / s.total * 100) : 0,
+      absences: s.absent,
+      total: s.total,
+    }))
+    .filter(g => g.name !== 'Inconnu')
+    .sort((a, b) => b.rate - a.rate)
+    .slice(0, 5)
+
+  // Top courses by absence rate
+  const topCourses = Object.entries(byCourse)
+    .map(([name, s]: any) => ({
+      name,
+      rate: s.total > 0 ? Math.round(s.absent / s.total * 100) : 0,
+      absences: s.absent,
+      total: s.total,
+    }))
+    .filter(c => c.name !== 'Inconnu')
+    .sort((a, b) => b.rate - a.rate)
+    .slice(0, 5)
+
+  return {
+    total, absents, lates, presents,
+    byStudent, byGroup, byCourse, byDay,
+    topGroups, topCourses, topDays,
+    groupAbsences,
+    totalAlerts: alerts.length,
+  }
 }
 
+// ── BUILD RICH SYSTEM PROMPT ─────────────────────────────────────────
+function buildSystemPrompt(stats: any, adminName: string, langStr: string) {
+  const { total, absents, lates, byStudent, topGroups, topCourses, totalAlerts } = stats
+  const pct = (n: number) => total ? Math.round(n / total * 100) : 0
+
+  const topAbsent = Object.values(byStudent)
+    .sort((a: any, b: any) => b.absent - a.absent)
+    .slice(0, 8)
+
+  const atRisk = Object.values(byStudent)
+    .filter((s: any) => s.total > 0 && s.absent / s.total > 0.25)
+
+  return [
+    'Tu es un assistant IA dans Attendify (gestion absences scolaires).',
+    'Tu aides ' + adminName + '. Réponds en ' + langStr + '. Sois concis et professionnel.',
+    '',
+    '=== STATISTIQUES GÉNÉRALES ===',
+    'Total relevés: ' + total + ' | Absences: ' + absents + ' (' + pct(absents) + '%) | Retards: ' + lates + ' | Présents: ' + stats.presents,
+    '',
+    '=== ÉTUDIANTS LES PLUS ABSENTS ===',
+    topAbsent.map((s: any) => s.name + ': ' + s.absent + ' abs/' + s.total + ' séances (' + Math.round(s.absent/s.total*100) + '%)').join(' | '),
+    '',
+    '=== ÉTUDIANTS À RISQUE (>25%) ===',
+    atRisk.length > 0
+      ? atRisk.map((s: any) => s.name + ' (' + Math.round(s.absent/s.total*100) + '%)').join(', ')
+      : 'Aucun étudiant à risque détecté',
+    '',
+    '=== CLASSES LES PLUS ABSENTÉISTES ===',
+    topGroups.length > 0
+      ? topGroups.map((g: any) => g.name + ': ' + g.rate + '% (' + g.absences + ' abs/' + g.total + ')').join(' | ')
+      : 'Aucune donnée de classe',
+    '',
+    '=== MATIÈRES LES PLUS ABSENTÉISTES ===',
+    topCourses.length > 0
+      ? topCourses.map((c: any) => c.name + ': ' + c.rate + '% (' + c.absences + ' abs/' + c.total + ')').join(' | ')
+      : 'Aucune donnée de matière',
+    '',
+    '=== ABSENCES PAR JOUR DE LA SEMAINE ===',
+    stats.topDays && stats.topDays.length > 0
+      ? stats.topDays.map((d: any) => d.day + ': ' + d.rate + '% abs (' + d.absences + '/' + d.total + ' séances)').join(' | ')
+      : 'Pas encore assez de données par jour',
+    stats.topDays && stats.topDays.length > 0
+      ? 'Jour avec le plus d\'absences: ' + stats.topDays[0]?.day + ' (' + stats.topDays[0]?.rate + '%)'
+      : '',
+    '',
+    '=== ABSENCES COLLECTIVES (étudiants absents ensemble) ===',
+    stats.groupAbsences && stats.groupAbsences.length > 0
+      ? stats.groupAbsences.map((g: any) =>
+          'Le ' + g.date + ' (' + g.group + '): ' + g.count + ' étudiants absents ensemble → ' + g.students.join(', ')
+        ).join(' | ')
+      : 'Aucune absence collective détectée (3+ étudiants le même jour dans le même groupe)',
+    '',
+    '=== ALERTES PARENTS ===',
+    'Total alertes envoyées aux parents depuis le début: ' + totalAlerts,
+    '',
+    'IMPORTANT: Réponds uniquement à partir de ces données. Ne génère jamais de chiffres que tu ne vois pas ici.',
+  ].join('\n')
+}
+
+// ── GENERATE REPORT ──────────────────────────────────────────────────
 async function generateReport(supabase: any, school_id: string, payload: any) {
   const { dateFrom, dateTo, lang = 'fr' } = payload
-  const rows = await fetchData(supabase, school_id)
-  const { total, absents, lates, presents, byStudent } = buildStats(rows)
+  const rows    = await fetchData(supabase, school_id)
+  const alerts  = await fetchAlerts(supabase, school_id)
+  const stats   = buildStats(rows, alerts)
+  const langStr = lang === 'ar' ? 'arabe' : lang === 'en' ? 'anglais' : 'français'
+  const pct     = (n: number) => stats.total ? Math.round(n / stats.total * 100) : 0
 
-  const topAbsent = Object.values(byStudent).sort((a, b) => b.absent - a.absent).slice(0, 5)
-  const atRisk    = Object.values(byStudent).filter(s => s.total > 0 && s.absent / s.total > 0.3)
-  const langStr   = lang === 'ar' ? 'en arabe' : lang === 'en' ? 'in English' : 'en français'
-  const pct       = (n: number) => total ? Math.round(n / total * 100) : 0
+  const topAbsent = Object.values(stats.byStudent).sort((a: any, b: any) => b.absent - a.absent).slice(0, 5)
+  const atRisk    = Object.values(stats.byStudent).filter((s: any) => s.total > 0 && s.absent / s.total > 0.3)
 
   const prompt = [
-    'Tu es un conseiller pédagogique. Rédige un rapport mensuel professionnel ' + langStr + '.',
+    'Tu es un conseiller pédagogique. Rédige un rapport mensuel professionnel en ' + langStr + '.',
     '',
     'Période: ' + (dateFrom ?? 'début') + ' → ' + (dateTo ?? "aujourd'hui"),
-    'Total: ' + total + ' | Présents: ' + presents + ' (' + pct(presents) + '%) | Absents: ' + absents + ' (' + pct(absents) + '%) | Retards: ' + lates,
+    'Total: ' + stats.total + ' | Présents: ' + stats.presents + ' (' + pct(stats.presents) + '%) | Absents: ' + stats.absents + ' (' + pct(stats.absents) + '%) | Retards: ' + stats.lates,
+    'Top 5 absents: ' + topAbsent.map((s: any) => s.name + ': ' + s.absent + ' abs/' + s.total).join(', '),
+    'Étudiants à risque (>30%): ' + atRisk.map((s: any) => s.name + ' (' + Math.round(s.absent/s.total*100) + '%)').join(', '),
+    'Classe la plus absentéiste: ' + (stats.topGroups[0]?.name ?? 'N/A') + ' (' + (stats.topGroups[0]?.rate ?? 0) + '%)',
+    'Matière la plus absentéiste: ' + (stats.topCourses[0]?.name ?? 'N/A') + ' (' + (stats.topCourses[0]?.rate ?? 0) + '%)',
+    'Alertes parents envoyées: ' + stats.totalAlerts,
     '',
-    'Top 5 absences: ' + topAbsent.map(s => s.name + ': ' + s.absent + ' abs/' + s.total + ' séances').join(', '),
-    'Étudiants à risque (>30%): ' + atRisk.map(s => s.name + ' (' + Math.round(s.absent / s.total * 100) + '%)').join(', '),
-    '',
-    'Structure: résumé exécutif, analyse, étudiants préoccupants, recommandations.',
+    'Structure: résumé exécutif, analyse par classe et matière, étudiants préoccupants, recommandations.',
   ].join('\n')
 
   const report = await ask(prompt)
-  return NextResponse.json({ report, stats: { total, presents, absents, lates, atRisk: atRisk.length } })
+  return NextResponse.json({
+    report,
+    stats: {
+      total: stats.total,
+      presents: stats.presents,
+      absents: stats.absents,
+      lates: stats.lates,
+      atRisk: atRisk.length,
+      totalAlerts: stats.totalAlerts,
+    }
+  })
 }
 
+// ── HANDLE CHAT ──────────────────────────────────────────────────────
 async function handleChat(supabase: any, school_id: string, payload: any, adminName: string) {
   const { messages, lang = 'fr' } = payload
-  const rows = await fetchData(supabase, school_id)
-  const { total, absents, lates, byStudent } = buildStats(rows)
+  const rows    = await fetchData(supabase, school_id)
+  const alerts  = await fetchAlerts(supabase, school_id)
+  const stats   = buildStats(rows, alerts)
+  const langStr = lang === 'ar' ? 'arabe' : lang === 'en' ? 'anglais' : 'français'
 
-  const topAbsent = Object.values(byStudent).sort((a: any, b: any) => b.absent - a.absent).slice(0, 8)
-  const atRisk    = Object.values(byStudent).filter((s: any) => s.total > 0 && s.absent / s.total > 0.25)
-  const langStr   = lang === 'ar' ? 'arabe' : lang === 'en' ? 'anglais' : 'français'
-
-  const system = [
-    'Tu es un assistant IA dans Attendify (gestion absences scolaires).',
-    'Tu aides ' + adminName + '. Réponds en ' + langStr + '. Sois concis et professionnel.',
-    'Données: Total=' + total + ' | Absences=' + absents + '(' + (total ? Math.round(absents / total * 100) : 0) + '%) | Retards=' + lates,
-    'Top absents: ' + topAbsent.map((s: any) => s.name + '(' + s.absent + ')').join(', '),
-    'À risque (>25%): ' + (atRisk.map((s: any) => s.name).join(', ') || 'aucun'),
-  ].join('\n')
+  const system = buildSystemPrompt(stats, adminName, langStr)
 
   const history = messages.slice(0, -1)
     .map((m: any) => (m.role === 'user' ? 'User: ' : 'Assistant: ') + m.content)
@@ -160,47 +322,58 @@ async function handleChat(supabase: any, school_id: string, payload: any, adminN
   return NextResponse.json({ reply })
 }
 
+// ── DETECT PATTERNS ──────────────────────────────────────────────────
 async function detectPatterns(supabase: any, school_id: string, payload: any) {
   const { lang = 'fr' } = payload
-  const rows = await fetchData(supabase, school_id)
-  const { byStudent } = buildStats(rows)
+  const rows    = await fetchData(supabase, school_id)
+  const alerts  = await fetchAlerts(supabase, school_id)
+  const stats   = buildStats(rows, alerts)
+  const langStr = lang === 'ar' ? 'arabe' : lang === 'en' ? 'anglais' : 'français'
 
   const byDay: Record<string, number> = {}
-  for (const s of Object.values(byStudent)) {
-    for (const day of s.days) {
+  for (const s of Object.values(stats.byStudent)) {
+    for (const day of (s as any).days) {
       byDay[day] = (byDay[day] ?? 0) + 1
     }
   }
 
   const worstDay = Object.entries(byDay).sort((a, b) => b[1] - a[1])[0] ?? null
-  const atRisk   = Object.values(byStudent).filter(s => s.total > 0 && s.absent / s.total > 0.25)
-  const langStr  = lang === 'ar' ? 'arabe' : lang === 'en' ? 'anglais' : 'français'
+  const atRisk   = Object.values(stats.byStudent).filter((s: any) => s.total > 0 && s.absent / s.total > 0.25)
 
   const prompt = [
     'Analyse ces données et identifie les patterns. Réponds en ' + langStr + '.',
     'Jour le plus problématique: ' + (worstDay?.[0] ?? 'N/A') + ' (' + (worstDay?.[1] ?? 0) + ' absences)',
     'Répartition par jour: ' + Object.entries(byDay).map(([d, n]) => d + ':' + n).join(', '),
+    'Classe la plus absentéiste: ' + (stats.topGroups[0]?.name ?? 'N/A') + ' (' + (stats.topGroups[0]?.rate ?? 0) + '%)',
+    'Matière la plus absentéiste: ' + (stats.topCourses[0]?.name ?? 'N/A') + ' (' + (stats.topCourses[0]?.rate ?? 0) + '%)',
     'Étudiants à risque (>25%): ' + atRisk.length,
-    'Détail: ' + atRisk.map(s => s.name + '(' + Math.round(s.absent / s.total * 100) + '%)').join(', '),
   ].join('\n')
 
   const insights = await ask(prompt)
-  return NextResponse.json({ insights, patterns: [], atRisk: atRisk.length, worstDay })
+  return NextResponse.json({
+    insights,
+    patterns: [],
+    atRisk: atRisk.length,
+    worstDay,
+    topGroups: stats.topGroups,
+    topCourses: stats.topCourses,
+  })
 }
 
+// ── PREDICT RISK ─────────────────────────────────────────────────────
 async function predictRisk(supabase: any, school_id: string, payload: any) {
   const { lang = 'fr' } = payload
-  const langStr = lang === 'ar' ? 'arabe' : lang === 'en' ? 'anglais' : 'français'
+  const langStr    = lang === 'ar' ? 'arabe' : lang === 'en' ? 'anglais' : 'français'
   const ML_API_URL = process.env.ML_API_URL
 
-  // ── Try the trained Random Forest model first ────────────
+  // Try the trained Random Forest model first
   if (ML_API_URL) {
     try {
       const res = await fetch(ML_API_URL + '/predict', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ school_id }),
-        signal:  AbortSignal.timeout(25000),
+        signal:  AbortSignal.timeout(55000),
       })
 
       if (res.ok) {
@@ -241,11 +414,12 @@ async function predictRisk(supabase: any, school_id: string, payload: any) {
     console.error('ML_API_URL env var is not set — using Groq fallback')
   }
 
-  // ── Fallback: Groq, formatted to match the same shape ─────
-  const rows = await fetchData(supabase, school_id)
-  const { byStudent } = buildStats(rows)
+  // Fallback: Groq estimation
+  const rows   = await fetchData(supabase, school_id)
+  const alerts = await fetchAlerts(supabase, school_id)
+  const stats  = buildStats(rows, alerts)
 
-  const allStudents = Object.values(byStudent).map((s: any) => {
+  const allStudents = Object.values(stats.byStudent).map((s: any) => {
     const absenceRate = s.total > 0 ? Math.round(s.absent / s.total * 100) : 0
     const risk_level  = absenceRate >= 30 ? 'high' : absenceRate >= 15 ? 'medium' : 'low'
     return {
@@ -265,10 +439,10 @@ async function predictRisk(supabase: any, school_id: string, payload: any) {
 
   const atRiskHigh   = allStudents.filter((s: any) => s.risk_level === 'high').length
   const atRiskMedium = allStudents.filter((s: any) => s.risk_level === 'medium').length
-  const top15 = allStudents.filter((s: any) => s.absence_rate > 15).slice(0, 15)
+  const top15        = allStudents.filter((s: any) => s.absence_rate > 15).slice(0, 15)
 
   const prompt = [
-    'Tu es un conseiller pédagogique. Analyse ces étudiants et prédi lesquels sont à risque.',
+    'Tu es un conseiller pédagogique. Analyse ces étudiants et identifie lesquels sont à risque.',
     'Pour chacun donne des recommandations concrètes. Réponds en ' + langStr + '.',
     '',
     JSON.stringify(top15.map((s: any) => ({
