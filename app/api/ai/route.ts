@@ -5,7 +5,7 @@ import Groq from 'groq-sdk'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse, type NextRequest } from 'next/server'
 
-const MODEL = 'llama-3.3-70b-versatile'
+const MODEL = 'qwen/qwen3.6-27b'
 
 function getGroq() {
   return new Groq({ apiKey: process.env.GROQ_API_KEY! })
@@ -20,8 +20,11 @@ async function ask(prompt: string, system?: string): Promise<string> {
     messages,
     max_tokens:  1500,
     temperature: 0.7,
-  })
-  return completion.choices[0]?.message?.content ?? ''
+    reasoning_effort: 'none', // disable thinking blocks
+  } as any)
+  const content = completion.choices[0]?.message?.content ?? ''
+  // Strip any <think>...</think> blocks just in case
+  return content.replace(/<think>[\s\S]*?<\/think>/g, '').trim()
 }
 
 export async function POST(request: NextRequest) {

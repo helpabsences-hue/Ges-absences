@@ -74,7 +74,22 @@ export function AdminStats({ lang = 'fr' }: { lang?: Lang }) {
       setStats({ totalTeachers: teachers ?? 0, totalStudents: students ?? 0, absencesToday: absences ?? 0, attendanceRate: rate })
       setLoading(false)
     }
+
     fetchStats()
+
+    // ── Realtime — auto-refresh when teacher marks attendance ──
+    const supabase = createClient()
+    const channel = supabase
+      .channel('admin-stats-realtime-' + Date.now())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance' },
+        () => { fetchStats() }
+      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'class_sessions' },
+        () => { fetchStats() }
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
   }, [])
 
   if (loading) {
