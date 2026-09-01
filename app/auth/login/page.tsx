@@ -63,31 +63,109 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error,    setError]    = useState('')
   const [loading,  setLoading]  = useState(false)
-  const [showPwd,  setShowPwd]  = useState(false)
-  const [checking, setChecking] = useState(true)
+  const [showPwd,    setShowPwd]    = useState(false)
+  const [isRecovery, setIsRecovery] = useState(false)
+  const [newPwd,     setNewPwd]     = useState('')
+  const [confirmPwd, setConfirmPwd] = useState('')
+  const [pwdSaved,   setPwdSaved]   = useState(false)
+  const [checking,   setChecking]   = useState(true)
 
   useEffect(() => {
     const hash   = window.location.hash.substring(1)
     const params = new URLSearchParams(hash)
     const type   = params.get('type')
     const token  = params.get('access_token')
-    const refresh = params.get('refresh_token')
+    const refresh = params.get('refresh_token') ?? ''
 
     if ((type === 'recovery' || type === 'invite') && token) {
-      // Store tokens in sessionStorage so reset-password page can read them
-      sessionStorage.setItem('recovery_access_token', token)
-      sessionStorage.setItem('recovery_refresh_token', refresh ?? '')
-      sessionStorage.setItem('recovery_type', type)
-      // Redirect without hash
-      window.location.replace('/auth/reset-password')
+      // Set session directly — no redirect needed
+      const supabase = createClient()
+      supabase.auth.setSession({ access_token: token, refresh_token: refresh })
+        .then(() => {
+          window.history.replaceState({}, '', '/auth/login')
+          setIsRecovery(true)
+          setChecking(false)
+        })
+        .catch(() => {
+          setIsRecovery(true)
+          setChecking(false)
+        })
       return
     }
     setChecking(false)
   }, [])
 
+  const handleSetPassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newPwd || newPwd.length < 8) { setError('Minimum 8 caractères.'); return }
+    if (newPwd !== confirmPwd) { setError('Les mots de passe ne correspondent pas.'); return }
+    setLoading(true); setError('')
+    const supabase = createClient()
+    const { error: updateError } = await supabase.auth.updateUser({ password: newPwd })
+    if (updateError) { setError(updateError.message); setLoading(false); return }
+    await supabase.auth.signOut()
+    setPwdSaved(true)
+    setLoading(false)
+    setTimeout(() => router.push('/auth/login'), 2000)
+  }
+
   if (checking) return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex items-center justify-center">
       <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"/>
+    </div>
+  )
+
+  // Show password creation form for parent invitation
+  if (isRecovery) return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center gap-2 mb-3">
+            <LogoIcon className="w-10 h-10" />
+            <span className="text-2xl font-bold text-white">Attend<span className="text-blue-400">efy</span></span>
+          </div>
+          <p className="text-slate-400 text-sm">Créez votre mot de passe pour accéder à votre espace parent</p>
+        </div>
+        {pwdSaved ? (
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-8 text-center space-y-4">
+            <div className="w-14 h-14 bg-green-500/20 rounded-full flex items-center justify-center mx-auto">
+              <svg className="w-7 h-7 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/>
+              </svg>
+            </div>
+            <p className="text-white font-semibold">Mot de passe créé avec succès !</p>
+            <p className="text-slate-400 text-sm animate-pulse">Redirection vers la connexion…</p>
+          </div>
+        ) : (
+          <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl">
+            <form onSubmit={handleSetPassword} className="space-y-5">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1.5">Nouveau mot de passe</label>
+                <input type="password" value={newPwd} onChange={e => { setNewPwd(e.target.value); setError('') }}
+                  placeholder="••••••••" minLength={8}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1.5">Confirmer le mot de passe</label>
+                <input type="password" value={confirmPwd} onChange={e => { setConfirmPwd(e.target.value); setError('') }}
+                  placeholder="••••••••"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+              </div>
+              {error && <p className="text-red-400 text-sm">{error}</p>}
+              <button type="submit" disabled={loading}
+                className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-semibold py-3 rounded-xl transition flex items-center justify-center gap-2">
+                {loading ? (
+                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                  </svg>
+                ) : null}
+                {loading ? 'Enregistrement…' : 'Créer mon mot de passe'}
+              </button>
+            </form>
+          </div>
+        )}
+      </div>
     </div>
   )
 
