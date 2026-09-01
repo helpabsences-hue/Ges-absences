@@ -66,14 +66,20 @@ export default function LoginPage() {
   const [showPwd,  setShowPwd]  = useState(false)
   const [checking, setChecking] = useState(true)
 
-  // If Supabase sends a recovery token to this page, redirect to reset-password
   useEffect(() => {
     const hash   = window.location.hash.substring(1)
     const params = new URLSearchParams(hash)
     const type   = params.get('type')
     const token  = params.get('access_token')
+    const refresh = params.get('refresh_token')
+
     if ((type === 'recovery' || type === 'invite') && token) {
-      window.location.href = '/auth/reset-password' + window.location.hash
+      // Store tokens in sessionStorage so reset-password page can read them
+      sessionStorage.setItem('recovery_access_token', token)
+      sessionStorage.setItem('recovery_refresh_token', refresh ?? '')
+      sessionStorage.setItem('recovery_type', type)
+      // Redirect without hash
+      window.location.replace('/auth/reset-password')
       return
     }
     setChecking(false)

@@ -16,27 +16,60 @@ export default function ResetPasswordPage() {
   const [saving,  setSaving]  = useState(false)
 
   useEffect(() => {
-    // Use the same auth client as forgot-password
-    // Both use the same localStorage key — code_verifier will be found
     const supabase = createAuthClient()
 
-    const params = new URLSearchParams(window.location.search)
-    const code   = params.get('code')
+    // Check sessionStorage first (from login page redirect)
+    const storedToken   = sessionStorage.getItem('recovery_access_token')
+    const storedRefresh = sessionStorage.getItem('recovery_refresh_token')
+    const storedType    = sessionStorage.getItem('recovery_type')
 
+    if (storedToken && (storedType === 'recovery' || storedType === 'invite')) {
+      sessionStorage.removeItem('recovery_access_token')
+      sessionStorage.removeItem('recovery_refresh_token')
+      sessionStorage.removeItem('recovery_type')
+      supabase.auth.setSession({
+        access_token:  storedToken,
+        refresh_token: storedRefresh ?? '',
+      }).then(({ data, error }) => {
+        if (error) console.error('setSession error:', error.message)
+        setState('ready')
+      })
+      return
+    }
+
+    // Handle hash fragment tokens directly
+    const hash   = window.location.hash.substring(1)
+    const params = new URLSearchParams(hash)
+    const accessToken  = params.get('access_token')
+    const refreshToken = params.get('refresh_token')
+    const type         = params.get('type')
+
+    if (accessToken && (type === 'recovery' || type === 'invite')) {
+      supabase.auth.setSession({
+        access_token:  accessToken,
+        refresh_token: refreshToken ?? '',
+      }).then(({ data, error }) => {
+        if (error) console.error('setSession error:', error.message)
+        else window.history.replaceState({}, '', '/auth/reset-password')
+        setState('ready')
+      })
+      return
+    }
+
+    // Handle ?code= param
+    const searchParams = new URLSearchParams(window.location.search)
+    const code = searchParams.get('code')
     if (code) {
       supabase.auth.exchangeCodeForSession(code)
         .then(({ data, error }) => {
-          if (error) {
-            console.error('Exchange error:', error.message)
-          } else if (data.session) {
-            window.history.replaceState({}, '', '/auth/reset-password')
-            setState('ready')
-          }
+          if (error) console.error('Exchange error:', error.message)
+          else window.history.replaceState({}, '', '/auth/reset-password')
+          setState('ready')
         })
       return
     }
 
-    // Listen for PASSWORD_RECOVERY
+    // Listen for PASSWORD_RECOVERY event
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if ((event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') && session) {
         setState('ready')
@@ -59,6 +92,9 @@ export default function ResetPasswordPage() {
     const { error } = await supabase.auth.updateUser({ password: pwd })
     setSaving(false)
     if (error) { setErr(error.message); return }
+
+    // Check role to redirect correctly
+    const { data: { user } } = await supabase.auth.getUser()
     await supabase.auth.signOut()
     setState('done')
     setTimeout(() => router.push('/auth/login'), 2000)
