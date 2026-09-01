@@ -87,15 +87,11 @@ export function AdminStats({ lang = 'fr' }: { lang?: Lang }) {
 
     // ── Realtime subscription ──────────────────────────────────
     const channel = supabase.current
-      .channel('admin-stats-' + Math.random())
-      .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'attendance' },
-        () => fetchStats()
-      )
-      .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'class_sessions' },
-        () => fetchStats()
-      )
+      .channel('attendance-saved')
+      .on('broadcast', { event: 'attendance-saved' }, () => {
+        console.log('[AdminStats] attendance saved → refreshing')
+        fetchStats()
+      })
       .subscribe((status: string) => {
         console.log('[AdminStats] realtime:', status)
       })

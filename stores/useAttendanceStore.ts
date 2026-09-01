@@ -229,6 +229,15 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
 
     if (error) console.error('Save error:', error.message)
 
+    // Broadcast to admin dashboard so it refreshes instantly
+    if (!error) {
+      await supabase.channel('attendance-saved').send({
+        type:    'broadcast',
+        event:   'attendance-saved',
+        payload: { session_id: activeSession.id },
+      })
+    }
+
     // Auto-refresh schedule so session status updates immediately
     if (!error) {
       setTimeout(() => get().fetchSchedule(), 400)
