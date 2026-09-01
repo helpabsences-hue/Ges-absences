@@ -87,9 +87,17 @@ export function AdminStats({ lang = 'fr' }: { lang?: Lang }) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'class_sessions' },
         () => { fetchStats() }
       )
-      .subscribe()
+      .subscribe((status: string) => {
+        console.log('realtime status:', status)
+      })
 
-    return () => { supabase.removeChannel(channel) }
+    // ── Polling fallback every 15 seconds ──────────────────────
+    const interval = setInterval(() => { fetchStats() }, 15000)
+
+    return () => {
+      supabase.removeChannel(channel)
+      clearInterval(interval)
+    }
   }, [])
 
   if (loading) {
