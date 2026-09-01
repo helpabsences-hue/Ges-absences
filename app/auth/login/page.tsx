@@ -64,6 +64,7 @@ export default function LoginPage() {
   const [error,    setError]    = useState('')
   const [loading,  setLoading]  = useState(false)
   const [showPwd,  setShowPwd]  = useState(false)
+  const [checking, setChecking] = useState(true)
 
   // If Supabase sends a recovery token to this page, redirect to reset-password
   useEffect(() => {
@@ -72,9 +73,17 @@ export default function LoginPage() {
     const type   = params.get('type')
     const token  = params.get('access_token')
     if ((type === 'recovery' || type === 'invite') && token) {
-      router.replace('/auth/reset-password' + window.location.hash)
+      window.location.href = '/auth/reset-password' + window.location.hash
+      return
     }
+    setChecking(false)
   }, [])
+
+  if (checking) return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex items-center justify-center">
+      <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"/>
+    </div>
+  )
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
