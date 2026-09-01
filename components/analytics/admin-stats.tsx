@@ -1,7 +1,7 @@
 'use client'
 // components/analytics/admin-stats.tsx
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { StatCard } from '@/components/analytics/stat-card'
 import { Users, GraduationCap, AlertCircle, BarChart3 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -41,64 +41,73 @@ export function AdminStats({ lang = 'fr' }: { lang?: Lang }) {
   const [stats,   setStats]   = useState<Stats>({ totalTeachers: 0, totalStudents: 0, absencesToday: 0, attendanceRate: 0 })
   const [loading, setLoading] = useState(true)
 
+  // Use a single stable supabase client instance
+  const supabase = useRef(createClient())
+
+  const fetchStats = useCallback(async () => {
+    const today = new Date().toISOString().split('T')[0]
+    const sb    = supabase.current
+
+    const [
+      { count: teachers },
+      { count: students },
+      { count: absences },
+      { data: todayRecords },
+    ] = await Promise.all([
+      sb.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'teacher'),
+      sb.from('students').select('*', { count: 'exact', head: true }),
+      sb.from('attendance')
+        .select('*, class_sessions!inner(session_date)', { count: 'exact', head: true })
+        .eq('status', 'absent')
+        .eq('class_sessions.session_date', today),
+      sb.from('attendance')
+        .select('status, class_sessions!inner(session_date)')
+        .eq('class_sessions.session_date', today),
+    ])
+
+    let present = 0, late = 0, total = 0
+    todayRecords?.forEach((r: any) => {
+      total++
+      if (r.status === 'present') present++
+      if (r.status === 'late')    late++
+    })
+    const rate = total > 0 ? Math.round(((present + late) / total) * 100) : 0
+
+    setStats({
+      totalTeachers:  teachers  ?? 0,
+      totalStudents:  students  ?? 0,
+      absencesToday:  absences  ?? 0,
+      attendanceRate: rate,
+    })
+    setLoading(false)
+  }, [])
+
   useEffect(() => {
-    const fetchStats = async () => {
-      const supabase = createClient()
-      const today    = new Date().toISOString().split('T')[0]
-
-      const [
-        { count: teachers },
-        { count: students },
-        { count: absences },
-        { data: todayRecords },
-      ] = await Promise.all([
-        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'teacher'),
-        supabase.from('students').select('*', { count: 'exact', head: true }),
-        supabase.from('attendance')
-          .select('*, class_sessions!inner(session_date)', { count: 'exact', head: true })
-          .eq('status', 'absent')
-          .eq('class_sessions.session_date', today),
-        supabase.from('attendance')
-          .select('status, class_sessions!inner(session_date)')
-          .eq('class_sessions.session_date', today),
-      ])
-
-      let present = 0, late = 0, total = 0
-      todayRecords?.forEach((r: any) => {
-        total++
-        if (r.status === 'present') present++
-        if (r.status === 'late')    late++
-      })
-      const rate = total > 0 ? Math.round(((present + late) / total) * 100) : 0
-
-      setStats({ totalTeachers: teachers ?? 0, totalStudents: students ?? 0, absencesToday: absences ?? 0, attendanceRate: rate })
-      setLoading(false)
-    }
-
     fetchStats()
 
-    // ── Realtime — auto-refresh when teacher marks attendance ──
-    const supabase = createClient()
-    const channel = supabase
-      .channel('admin-stats-realtime-' + Date.now())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance' },
-        () => { fetchStats() }
+    // ── Realtime subscription ──────────────────────────────────
+    const channel = supabase.current
+      .channel('admin-stats-' + Math.random())
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'attendance' },
+        () => fetchStats()
       )
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'class_sessions' },
-        () => { fetchStats() }
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'class_sessions' },
+        () => fetchStats()
       )
       .subscribe((status: string) => {
-        console.log('realtime status:', status)
+        console.log('[AdminStats] realtime:', status)
       })
 
-    // ── Polling fallback every 15 seconds ──────────────────────
-    const interval = setInterval(() => { fetchStats() }, 15000)
+    // ── Polling every 10 seconds as guaranteed fallback ────────
+    const interval = setInterval(fetchStats, 10000)
 
     return () => {
-      supabase.removeChannel(channel)
+      supabase.current.removeChannel(channel)
       clearInterval(interval)
     }
-  }, [])
+  }, [fetchStats])
 
   if (loading) {
     return (
