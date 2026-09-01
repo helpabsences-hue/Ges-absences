@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic'
 // app/auth/login/page.tsx
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -64,6 +64,17 @@ export default function LoginPage() {
   const [error,    setError]    = useState('')
   const [loading,  setLoading]  = useState(false)
   const [showPwd,  setShowPwd]  = useState(false)
+
+  // If Supabase sends a recovery token to this page, redirect to reset-password
+  useEffect(() => {
+    const hash   = window.location.hash.substring(1)
+    const params = new URLSearchParams(hash)
+    const type   = params.get('type')
+    const token  = params.get('access_token')
+    if ((type === 'recovery' || type === 'invite') && token) {
+      router.replace('/auth/reset-password' + window.location.hash)
+    }
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
