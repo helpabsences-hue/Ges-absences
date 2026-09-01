@@ -67,7 +67,7 @@ function InviteForm() {
     <form onSubmit={handleSubmit} className="space-y-5">
       <div className="text-center mb-2">
         <h2 className="text-xl font-semibold text-white">Accept your invitation</h2>
-        <p className="text-slate-400 text-sm mt-1">Set up your Attendify account below</p>
+        <p className="text-slate-400 text-sm mt-1">Set up your Attendefy account below</p>
       </div>
 
       <div>

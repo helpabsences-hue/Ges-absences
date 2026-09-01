@@ -13,7 +13,7 @@ const UI: Record<Lang, Record<string, string>> = {
     tabChat: 'Chatbot', tabRisk: 'Analyse des Risques',
     placeholder: "Posez une question... ex: Qui a le plus d'absences ?",
     send: 'Envoyer',
-    welcome: "Bonjour ! Je suis votre assistant IA Attendify. Je peux analyser les absences, identifier les étudiants à risque, ou rédiger des emails aux parents.",
+    welcome: "Bonjour ! Je suis votre assistant IA Attendefy. Je peux analyser les absences, identifier les étudiants à risque, ou rédiger des emails aux parents.",
     analyzeBtn: 'Analyser les risques',
     analyzing: 'Analyse en cours…',
     riskSubtitle: 'Modèle Random Forest entraîné sur vos données réelles',
@@ -28,7 +28,7 @@ const UI: Record<Lang, Record<string, string>> = {
     tabChat: 'Chatbot', tabRisk: 'Risk Analysis',
     placeholder: 'Ask a question... e.g. Who has the most absences?',
     send: 'Send',
-    welcome: "Hello! I'm your Attendify AI assistant. I can analyze absences, identify at-risk students, or draft parent emails.",
+    welcome: "Hello! I'm your Attendefy AI assistant. I can analyze absences, identify at-risk students, or draft parent emails.",
     analyzeBtn: 'Analyze risks',
     analyzing: 'Analyzing…',
     riskSubtitle: 'Random Forest model trained on your real data',
@@ -43,7 +43,7 @@ const UI: Record<Lang, Record<string, string>> = {
     tabChat: 'المحادثة', tabRisk: 'تحليل المخاطر',
     placeholder: 'اطرح سؤالاً...',
     send: 'إرسال',
-    welcome: 'مرحباً! أنا مساعدك الذكي في Attendify.',
+    welcome: 'مرحباً! أنا مساعدك الذكي في Attendefy.',
     analyzeBtn: 'تحليل المخاطر',
     analyzing: 'جارٍ التحليل…',
     riskSubtitle: 'نموذج Random Forest مدرب على بياناتك',
@@ -60,7 +60,7 @@ interface Message { role: 'user' | 'assistant'; content: string }
 // ── Skeleton components ────────────────────────────────────────
 function Skeleton({ className = '', style }: { className?: string; style?: React.CSSProperties }) {
   return (
-    <div style={style} className={`animate-pulse bg-slate-700/50 rounded-lg ${className}`} />
+    <div className={`animate-pulse bg-slate-700/50 rounded-lg ${className}`} style={style} />
   )
 }
 
@@ -216,13 +216,26 @@ export default function AIPage() {
             </svg>
             {t.tabChat}
           </button>
+          <button onClick={() => setActiveTab('risk')}
+            className={`${tabBase} ${activeTab === 'risk' ? tabActive : tabInactive} flex items-center justify-center gap-2`}>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+            </svg>
+            {t.tabRisk}
+            {prediction?.at_risk_high > 0 && (
+              <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                {prediction.at_risk_high}
+              </span>
+            )}
+          </button>
         </div>
 
         {/* ── Tab Content ── */}
-        <div className="p-4 bg-white dark:bg-slate-900 rounded-b-2xl">
+        <div className="p-4">
 
           {/* ── CHAT TAB ── */}
-          {activeTab === 'chat' && (  
+          {activeTab === 'chat' && (
             <div className="flex flex-col" style={{ height: 'calc(100vh - 340px)', minHeight: '400px' }}>
               {/* Messages */}
               <div className="flex-1 overflow-y-auto space-y-3 scrollbar-none pr-1">
@@ -239,7 +252,7 @@ export default function AIPage() {
                         </div>
                         <div className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap
                           ${msg.role === 'assistant'
-                            ? 'bg-slate-800 text-slate-100 rounded-tl-sm'
+                            ? 'bg-slate-800 text-slate-200 rounded-tl-sm'
                             : 'bg-blue-600 text-white rounded-tr-sm'
                           }`}>
                           {msg.content}
@@ -249,7 +262,7 @@ export default function AIPage() {
                     {loading && (
                       <div className="flex gap-3">
                         <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-white text-sm font-bold shrink-0">AI</div>
-                        <div className="bg-slate-500 text-gray-50 px-4 py-3 rounded-2xl rounded-tl-sm">
+                        <div className="bg-slate-800 px-4 py-3 rounded-2xl rounded-tl-sm">
                           <div className="flex gap-1 items-center h-4">
                             {[0,1,2].map(i => (
                               <div key={i} className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"
@@ -290,6 +303,121 @@ export default function AIPage() {
                   </button>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* ── RISK TAB ── */}
+          {activeTab === 'risk' && (
+            <div className="space-y-4" style={{ minHeight: '400px' }}>
+              {/* Trigger button */}
+              <div className={`flex items-center justify-between gap-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
+                <div>
+                  <p className="text-sm font-semibold text-white">🎯 {t.tabRisk}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">{t.riskSubtitle}</p>
+                </div>
+                <button onClick={runPrediction} disabled={predicting}
+                  className="flex items-center gap-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed
+                    text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition shrink-0">
+                  {predicting ? (
+                    <>
+                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                      </svg>
+                      {t.analyzing}
+                    </>
+                  ) : t.analyzeBtn}
+                </button>
+              </div>
+
+              {/* Skeleton while loading */}
+              {predicting && <RiskSkeleton />}
+
+              {/* Empty state */}
+              {!predicting && !prediction && (
+                <div className="flex flex-col items-center justify-center py-16 space-y-3">
+                  <div className="w-16 h-16 bg-violet-500/10 rounded-2xl flex items-center justify-center">
+                    <svg className="w-8 h-8 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                    </svg>
+                  </div>
+                  <p className="text-slate-500 text-sm text-center">{t.emptyRisk}</p>
+                </div>
+              )}
+
+              {/* Results */}
+              {!predicting && prediction && (
+                <div className="space-y-4">
+                  {/* Summary cards */}
+                  <div className="grid grid-cols-3 gap-3">
+                    {[
+                      { label: t.total,      value: prediction.total,          color: 'text-white',     bg: 'bg-slate-800',     border: 'border-slate-700'    },
+                      { label: t.highRisk,   value: prediction.at_risk_high,   color: 'text-red-400',   bg: 'bg-red-500/10',    border: 'border-red-500/20'   },
+                      { label: t.mediumRisk, value: prediction.at_risk_medium, color: 'text-amber-400', bg: 'bg-amber-500/10',  border: 'border-amber-500/20' },
+                    ].map(item => (
+                      <div key={item.label} className={`${item.bg} border ${item.border} rounded-xl p-4 text-center`}>
+                        <p className={`text-2xl font-bold ${item.color}`}>{item.value ?? 0}</p>
+                        <p className="text-xs text-slate-500 mt-1">{item.label}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Source badge */}
+                  <div>
+                    <span className={`inline-flex items-center gap-1.5 text-xs px-3 py-1 rounded-full font-semibold ${
+                      prediction.source === 'ml_model'
+                        ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+                        : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                    }`}>
+                      {prediction.source === 'ml_model' ? t.mlBadge : t.groqBadge}
+                    </span>
+                  </div>
+
+                  {/* AI explanation */}
+                  {prediction.prediction && (
+                    <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 text-sm text-slate-300 leading-relaxed whitespace-pre-wrap max-h-48 overflow-y-auto scrollbar-none">
+                      {prediction.prediction}
+                    </div>
+                  )}
+
+                  {/* At-risk students list */}
+                  {prediction.students?.filter((s: any) => s.risk_level === 'high' || s.risk_level === 'medium').length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t.watchTitle}</p>
+                      {prediction.students
+                        .filter((s: any) => s.risk_level === 'high' || s.risk_level === 'medium')
+                        .slice(0, 6)
+                        .map((s: any, i: number) => (
+                          <div key={i} className={`flex items-center justify-between rounded-xl px-4 py-3 border transition-colors
+                            ${s.risk_level === 'high'
+                              ? 'bg-red-500/5 border-red-500/15 hover:bg-red-500/10'
+                              : 'bg-amber-500/5 border-amber-500/15 hover:bg-amber-500/10'
+                            } ${isRtl ? 'flex-row-reverse' : ''}`}>
+                            <div className={isRtl ? 'text-right' : ''}>
+                              <p className="text-sm font-semibold text-white">{s.student_name}</p>
+                              <p className="text-xs text-slate-500 mt-0.5">
+                                {s.group_name} — {s.absence_rate}% {t.absences}
+                              </p>
+                            </div>
+                            <div className={`flex items-center gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
+                              <span className={`text-xs font-bold px-2.5 py-1 rounded-lg ${
+                                s.risk_level === 'high'
+                                  ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                                  : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                              }`}>
+                                {s.risk_score}%
+                              </span>
+                              <div className={`w-1.5 h-8 rounded-full ${
+                                s.risk_level === 'high' ? 'bg-red-400' : 'bg-amber-400'
+                              }`} />
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>

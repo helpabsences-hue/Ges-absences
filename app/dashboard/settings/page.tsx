@@ -16,7 +16,7 @@ const UI: Record<Lang, {
   frenchDesc: string; englishDesc: string; arabicDesc: string
 }> = {
   fr: {
-    title: 'Paramètres', desc: 'Personnalisez votre expérience Attendify', saved: 'Préférences sauvegardées',
+    title: 'Paramètres', desc: 'Personnalisez votre expérience Attendefy', saved: 'Préférences sauvegardées',
     appearance: 'Apparence', appearanceDesc: "Choisissez le thème de l'interface",
     dark: 'Sombre', darkDesc: 'Interface sombre, idéale pour la nuit',
     light: 'Clair', lightDesc: 'Interface claire et lumineuse',
@@ -24,7 +24,7 @@ const UI: Record<Lang, {
     frenchDesc: 'Interface en français', englishDesc: 'Interface in English', arabicDesc: 'واجهة باللغة العربية',
   },
   en: {
-    title: 'Settings', desc: 'Customize your Attendify experience', saved: 'Preferences saved',
+    title: 'Settings', desc: 'Customize your Attendefy experience', saved: 'Preferences saved',
     appearance: 'Appearance', appearanceDesc: 'Choose the interface theme',
     dark: 'Dark', darkDesc: 'Dark interface, ideal for night use',
     light: 'Light', lightDesc: 'Bright and clear interface',
@@ -32,7 +32,7 @@ const UI: Record<Lang, {
     frenchDesc: 'Interface in French', englishDesc: 'Interface in English', arabicDesc: 'Interface in Arabic',
   },
   ar: {
-    title: 'الإعدادات', desc: 'خصّص تجربتك في Attendify', saved: 'تم حفظ التفضيلات',
+    title: 'الإعدادات', desc: 'خصّص تجربتك في Attendefy', saved: 'تم حفظ التفضيلات',
     appearance: 'المظهر', appearanceDesc: 'اختر مظهر الواجهة',
     dark: 'داكن', darkDesc: 'واجهة داكنة مثالية للاستخدام الليلي',
     light: 'فاتح', lightDesc: 'واجهة فاتحة ومضيئة',
