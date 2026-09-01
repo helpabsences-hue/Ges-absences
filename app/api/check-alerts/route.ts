@@ -169,7 +169,7 @@ async function sendAlertEmail({
 <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:480px;margin:0 auto;direction:${dir};">
   <div style="background:#1e40af;padding:28px 36px;text-align:center;border-radius:12px 12px 0 0;">
     <h1 style="margin:0;color:#fff;font-size:22px;font-weight:700;">
-      Attend<span style="color:#93c5fd;">ify</span>
+      Attend<span style="color:#93c5fd;">efy</span>
     </h1>
     <p style="margin:4px 0 0;color:#bfdbfe;font-size:12px;">${schoolName}</p>
   </div>

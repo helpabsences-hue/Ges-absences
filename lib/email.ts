@@ -1,7 +1,7 @@
 // lib/email.ts
 
 const BREVO_API_KEY = process.env.BREVO_API_KEY!
-const FROM_EMAIL    = process.env.FROM_EMAIL || 'noreply@attendify.app'
+const FROM_EMAIL    = process.env.FROM_EMAIL || 'noreply@attendefy.com'
 const FROM_NAME     = 'Attendefy'
 // Never fall back to localhost — always use the real production URL
 const BASE_URL      = process.env.NEXT_PUBLIC_APP_URL || 'https://attendeffy.vercel.app'
@@ -44,7 +44,7 @@ export async function sendInvitationEmail({
 <body>
   <div class="wrap">
     <div class="head">
-      <div class="logo">Attend<span>ify</span></div>
+      <div class="logo">Attend<span>efy</span></div>
     </div>
     <div class="body">
       <span class="badge">${roleLabel} Invitation</span>
@@ -115,7 +115,7 @@ export async function sendAbsenceAlert({
 <div style="font-family:-apple-system,sans-serif;max-width:500px;margin:0 auto;">
   <div style="background:#1e40af;padding:28px 32px;border-radius:12px 12px 0 0;text-align:center;">
     <h1 style="margin:0;color:#fff;font-size:22px;font-weight:700;">
-      Attend<span style="color:#93c5fd;">ify</span>
+      Attend<span style="color:#93c5fd;">efy</span>
     </h1>
     <p style="margin:4px 0 0;color:#bfdbfe;font-size:12px;">Gestion des absences scolaires</p>
   </div>

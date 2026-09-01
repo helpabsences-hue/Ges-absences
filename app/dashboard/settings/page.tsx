@@ -79,11 +79,13 @@ export default function SettingsPage() {
     if (!schoolId) return
     setThreshLoad(true)
     const supabase = createClient()
-    await supabase.from('schools')
+    const { error } = await supabase.from('schools')
       .update({ absence_threshold: threshold })
       .eq('id', schoolId)
+    if (error) console.error('saveThreshold error:', error.message, error.code, error.details)
+    else console.log('saveThreshold success:', threshold)
     setThreshLoad(false)
-    setThreshSaved(true)
+    setThreshSaved(!error)
     setTimeout(() => setThreshSaved(false), 2000)
   }
 
