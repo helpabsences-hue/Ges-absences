@@ -7,7 +7,6 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import type { RegisterPayload } from '@/types'
-import { LogoIcon } from '@/components/shared/LogoIcon'
 
 const INITIAL: RegisterPayload = {
   schoolName: '',
@@ -57,9 +56,14 @@ export default function RegisterPage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex items-center justify-center p-4">
         <div className="relative w-full max-w-md text-center">
-         <div className={`inline-flex items-center gap-2 mb-3`}>
-            <LogoIcon className="w-10 h-10" />
-            <span className="text-2xl font-bold text-slate-50 tracking-tight">
+          <div className="inline-flex items-center gap-2 mb-8">
+            <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+              </svg>
+            </div>
+            <span className="text-2xl font-bold text-white tracking-tight">
               Attend<span className="text-blue-400">efy</span>
             </span>
           </div>
@@ -102,13 +106,18 @@ export default function RegisterPage() {
       <div className="relative w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className={`inline-flex items-center gap-2 mb-3`}>
-            <LogoIcon className="w-10 h-10" />
-            <span className="text-2xl font-bold text-slate-50 tracking-tight">
+          <div className="inline-flex items-center gap-2 mb-3">
+            <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+              </svg>
+            </div>
+            <span className="text-2xl font-bold text-white tracking-tight">
               Attend<span className="text-blue-400">efy</span>
             </span>
           </div>
-          <p className="text-slate-400 text-sm">Create your school account </p>
+          <p className="text-slate-400 text-sm">Create your school account — free to start</p>
         </div>
 
         {/* Card */}
@@ -122,7 +131,7 @@ export default function RegisterPage() {
 
             {/* School name */}
             <div>
-              <label className="block text-sm font-medium text-slate-400 mb-1.5">
+              <label className="block text-sm font-medium text-slate-300 mb-1.5">
                 School name
               </label>
               <input
@@ -137,7 +146,7 @@ export default function RegisterPage() {
 
             {/* City */}
             <div>
-              <label className="block text-sm font-medium text-slate-400 mb-1.5">
+              <label className="block text-sm font-medium text-slate-300 mb-1.5">
                 City
               </label>
               <input
@@ -157,7 +166,7 @@ export default function RegisterPage() {
 
             {/* Owner name */}
             <div>
-              <label className="block text-sm font-medium text-slate-400 mb-1.5">
+              <label className="block text-sm font-medium text-slate-300 mb-1.5">
                 Your full name
               </label>
               <input
@@ -172,7 +181,7 @@ export default function RegisterPage() {
 
             {/* Email */}
             <div>
-              <label className="block text-sm font-medium text-slate-400 mb-1.5">
+              <label className="block text-sm font-medium text-slate-300 mb-1.5">
                 Email address
               </label>
               <input
@@ -188,7 +197,7 @@ export default function RegisterPage() {
 
             {/* Password */}
             <div>
-              <label className="block text-sm font-medium text-slate-400 mb-1.5">
+              <label className="block text-sm font-medium text-slate-300 mb-1.5">
                 Password
               </label>
               <input

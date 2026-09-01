@@ -109,7 +109,7 @@ export default function LoginPage() {
 
             {/* Email */}
             <div>
-              <label className="block text-sm font-medium text-slate-600 mb-1.5">
+              <label className="block text-sm font-medium text-slate-300 mb-1.5">
                 {ui.emailLabel}
               </label>
               <input
@@ -124,7 +124,7 @@ export default function LoginPage() {
 
             {/* Password */}
             <div>
-              <label className="block text-sm font-medium text-slate-600  mb-1.5">
+              <label className="block text-sm font-medium text-slate-300 mb-1.5">
                 {ui.passwordLabel}
               </label>
               <div className="relative">
