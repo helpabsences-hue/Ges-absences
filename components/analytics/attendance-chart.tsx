@@ -1,7 +1,7 @@
 'use client'
 // components/analytics/attendance-chart.tsx
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
@@ -52,36 +52,54 @@ export function AttendanceChart({ lang = 'fr' }: { lang?: Lang }) {
   const labels = CHART_LABELS[lang]
   const legend = LEGEND[lang]
 
-  useEffect(() => {
-    const fetchChartData = async () => {
-      const supabase = createClient()
-      const dates: string[] = []
-      for (let i = 6; i >= 0; i--) {
-        const d = new Date(); d.setDate(d.getDate() - i)
-        dates.push(d.toISOString().split('T')[0])
-      }
-      const { data: records } = await supabase
-        .from('attendance')
-        .select('status, class_sessions!inner(session_date)')
-        .gte('class_sessions.session_date', dates[0])
-        .lte('class_sessions.session_date', dates[6])
+  const supabase = useRef(createClient())
 
-      const byDate: Record<string, ChartData> = {}
-      dates.forEach((d) => {
-        byDate[d] = { day: DAY_NAMES[lang][new Date(d).getDay()], present: 0, absent: 0, late: 0 }
-      })
-      records?.forEach((r: any) => {
-        const date = r.class_sessions?.session_date
-        if (!date || !byDate[date]) return
-        if (r.status === 'present') byDate[date].present++
-        if (r.status === 'absent')  byDate[date].absent++
-        if (r.status === 'late')    byDate[date].late++
-      })
-      setData(Object.values(byDate))
-      setLoading(false)
+  const fetchChartData = useCallback(async () => {
+    const dates: string[] = []
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(); d.setDate(d.getDate() - i)
+      dates.push(d.toISOString().split('T')[0])
     }
-    fetchChartData()
+    const { data: records } = await supabase.current
+      .from('attendance')
+      .select('status, class_sessions!inner(session_date)')
+      .gte('class_sessions.session_date', dates[0])
+      .lte('class_sessions.session_date', dates[6])
+
+    const byDate: Record<string, ChartData> = {}
+    dates.forEach((d) => {
+      byDate[d] = { day: DAY_NAMES[lang][new Date(d).getDay()], present: 0, absent: 0, late: 0 }
+    })
+    records?.forEach((r: any) => {
+      const date = r.class_sessions?.session_date
+      if (!date || !byDate[date]) return
+      if (r.status === 'present') byDate[date].present++
+      if (r.status === 'absent')  byDate[date].absent++
+      if (r.status === 'late')    byDate[date].late++
+    })
+    setData(Object.values(byDate))
+    setLoading(false)
   }, [lang])
+
+  useEffect(() => {
+    fetchChartData()
+
+    // ── Listen to broadcast from teacher save ──────────────────
+    const channel = supabase.current
+      .channel('attendance-saved')
+      .on('broadcast', { event: 'attendance-saved' }, () => {
+        fetchChartData()
+      })
+      .subscribe()
+
+    // ── Polling every 10 seconds as fallback ───────────────────
+    const interval = setInterval(fetchChartData, 10000)
+
+    return () => {
+      supabase.current.removeChannel(channel)
+      clearInterval(interval)
+    }
+  }, [fetchChartData])
 
   return (
     <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden h-full">
