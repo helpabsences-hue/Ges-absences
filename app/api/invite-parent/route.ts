@@ -31,21 +31,32 @@ export async function POST(request: NextRequest) {
 
   // Create parent auth account with temp password
   const tempPassword = Math.random().toString(36).slice(-10) + 'A1!'
-  const { data: authData, error: authError } = await admin.auth.admin.createUser({
-    email:         parent_email,
-    password:      tempPassword,
-    email_confirm: true,
-    user_metadata: { name: parent_name ?? 'Parent' },
-  })
+  let userId: string
 
-  if (authError || !authData.user) {
-    console.error('invite-parent auth error:', authError?.message)
-    return NextResponse.json({ error: authError?.message }, { status: 400 })
+  // Check if auth user already exists
+  const { data: existingUsers } = await admin.auth.admin.listUsers()
+  const existingAuthUser = existingUsers?.users?.find(u => u.email === parent_email)
+
+  if (existingAuthUser) {
+    userId = existingAuthUser.id
+  } else {
+    const { data: authData, error: authError } = await admin.auth.admin.createUser({
+      email:         parent_email,
+      password:      tempPassword,
+      email_confirm: true,
+      user_metadata: { name: parent_name ?? 'Parent' },
+    })
+
+    if (authError || !authData.user) {
+      console.error('invite-parent auth error:', authError?.message)
+      return NextResponse.json({ error: authError?.message }, { status: 400 })
+    }
+    userId = authData.user.id
   }
 
   // Create parent profile linked to student
   const { error: profileError } = await admin.from('profiles').insert({
-    id:         authData.user.id,
+    id:         userId,
     name:       parent_name ?? 'Parent de ' + student_name,
     email:      parent_email,
     role:       'parent',
@@ -55,7 +66,6 @@ export async function POST(request: NextRequest) {
 
   if (profileError) {
     console.error('invite-parent profile error:', profileError.message)
-    await admin.auth.admin.deleteUser(authData.user.id)
     return NextResponse.json({ error: profileError.message }, { status: 500 })
   }
 
