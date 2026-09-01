@@ -118,8 +118,40 @@ export default function StudentsPage() {
     if (!form.group_id)           { setFormError(ui.errGroup);  return }
     if (!form.parent_phone?.trim()) { setFormError(lang === 'ar' ? 'رقم هاتف ولي الأمر مطلوب' : lang === 'fr' ? 'Le téléphone du parent est obligatoire' : 'Parent phone is required'); return }
     setSaving(true); setFormError('')
-    if (editId) { await updateStudent(editId, form) }
-    else { const id = await addStudent(form); if (!id) { setSaving(false); return } }
+
+    if (editId) {
+      await updateStudent(editId, form)
+    } else {
+      const id = await addStudent(form)
+      if (!id) { setSaving(false); return }
+
+      // Auto-invite parent if email provided
+      if (form.parent_email?.trim()) {
+        try {
+          await fetch('/api/invite-parent', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              student_id:   id,
+              parent_email: form.parent_email.trim(),
+              parent_name:  form.parent_name?.trim() || undefined,
+              student_name: form.name.trim(),
+              school_name:  'Attendefy',
+            }),
+          })
+          toast.success(lang === 'fr'
+            ? `Invitation envoyée à ${form.parent_email}`
+            : lang === 'ar'
+            ? `تم إرسال الدعوة إلى ${form.parent_email}`
+            : `Invitation sent to ${form.parent_email}`
+          )
+        } catch {
+          // Non-blocking — student still created successfully
+          console.error('Failed to invite parent')
+        }
+      }
+    }
+
     setSaving(false); handleCancel()
   }
 
