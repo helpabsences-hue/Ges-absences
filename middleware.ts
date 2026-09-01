@@ -1,7 +1,17 @@
 // src/middleware.ts
 
-import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+
+interface CookieToSet {
+  name: string
+  value: string
+  options?: Record<string, unknown>
+}
+
+interface UserProfile {
+  role: string
+}
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
@@ -14,7 +24,7 @@ export async function middleware(request: NextRequest) {
         getAll() {
           return request.cookies.getAll()
         },
-        setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
+        setAll(cookiesToSet: CookieToSet[]) {
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           )
@@ -38,10 +48,7 @@ export async function middleware(request: NextRequest) {
   const isAuthRoute =
     pathname.startsWith('/auth/login') ||
     pathname.startsWith('/auth/register') ||
-    pathname.startsWith('/auth/invite') ||
-    pathname.startsWith('/auth/forgot-password') ||
-    pathname.startsWith('/auth/reset-password') ||
-    pathname.startsWith('/auth/callback')
+    pathname.startsWith('/auth/invite')
 
   const isApiRoute = pathname.startsWith('/api/')
 
@@ -78,6 +85,12 @@ export async function middleware(request: NextRequest) {
       url.pathname = '/teacher'
       return NextResponse.redirect(url)
     }
+
+    if (profile?.role === 'parent') {
+      const url = request.nextUrl.clone()
+      url.pathname = '/parent'
+      return NextResponse.redirect(url)
+    }
   }
 
   // Logged-in admin/super_admin trying to access /teacher → send to /dashboard
@@ -89,6 +102,21 @@ export async function middleware(request: NextRequest) {
       .single()
 
     if (profile?.role !== 'teacher') {
+      const url = request.nextUrl.clone()
+      url.pathname = '/dashboard'
+      return NextResponse.redirect(url)
+    }
+  }
+
+  // Logged-in non-parent trying to access /parent → send to /dashboard
+  if (user && pathname.startsWith('/parent')) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (profile?.role !== 'parent') {
       const url = request.nextUrl.clone()
       url.pathname = '/dashboard'
       return NextResponse.redirect(url)

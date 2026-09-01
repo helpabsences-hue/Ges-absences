@@ -1,6 +1,6 @@
 // src/types/index.ts
 
-export type Role = 'super_admin' | 'admin' | 'teacher'
+export type Role = 'super_admin' | 'admin' | 'teacher' | 'parent'
 export type AttendanceStatus = 'present' | 'absent' | 'late' | 'unmarked'
 export type InvitationStatus = 'pending' | 'accepted'
 export type Day = 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday'
@@ -195,5 +195,4 @@ export interface AddPlanningPayload {
   day: Day
   start_time: string
   end_time: string
-  session_date?: string
 }

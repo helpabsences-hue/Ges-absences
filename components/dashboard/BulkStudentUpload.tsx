@@ -4,11 +4,12 @@ import { toast } from 'sonner'
 
 import { useRef, useState } from 'react'
 import Papa, { type ParseResult } from 'papaparse'
+import * as XLSX from 'xlsx'
 import { createClient } from '@/lib/supabase/client'
 import { useStudentStore } from '@/stores/useStudentStore'
 import { useAuthStore } from '@/stores/useAuthStore'
 
-interface CSVRow {
+interface FileRow {
   name:          string
   massar_code:   string
   group_name:    string
@@ -23,24 +24,106 @@ interface UploadResult {
   errors:   string[]
 }
 
+function parseExcel(file: File): Promise<FileRow[]> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer)
+        const wb   = XLSX.read(data, { type: 'array' })
+        const ws   = wb.Sheets[wb.SheetNames[0]]
+        const rows = XLSX.utils.sheet_to_json<FileRow>(ws, { defval: '' })
+        resolve(rows)
+      } catch (err: any) {
+        reject(new Error('Excel parse error: ' + err.message))
+      }
+    }
+    reader.onerror = () => reject(new Error('Failed to read file'))
+    reader.readAsArrayBuffer(file)
+  })
+}
+
 export default function BulkStudentUpload() {
-  const fileRef              = useRef<HTMLInputElement>(null)
-  const [file, setFile]      = useState<File | null>(null)
+  const fileRef               = useRef<HTMLInputElement>(null)
+  const [file, setFile]       = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
-  const [result, setResult]  = useState<UploadResult | null>(null)
+  const [result, setResult]   = useState<UploadResult | null>(null)
   const [dragOver, setDragOver] = useState(false)
 
   const { fetchStudents } = useStudentStore()
   const { profile }       = useAuthStore()
 
+  const isExcel = (f: File) => f.name.endsWith('.xlsx') || f.name.endsWith('.xls')
+  const isCsv   = (f: File) => f.name.endsWith('.csv')
+
   const pickFile = (f: File | null) => {
     if (!f) return
-    if (!f.name.endsWith('.csv')) {
-      toast.error('Please select a .csv file.')
+    if (!isCsv(f) && !isExcel(f)) {
+      toast.error('Please select a .csv or .xlsx file.')
       return
     }
     setFile(f)
     setResult(null)
+  }
+
+  const processRows = async (rows: FileRow[]) => {
+    const supabase = createClient()
+
+    const { data: groups } = await supabase
+      .from('groups')
+      .select('id, name')
+      .eq('school_id', profile!.school_id)
+
+    const groupMap = new Map((groups ?? []).map(g => [g.name.trim().toLowerCase(), g.id]))
+
+    const toInsert: any[] = []
+    const skipped: string[] = []
+    const errors:  string[] = []
+
+    rows.forEach((row, i) => {
+      const name        = String(row.name ?? '').trim()
+      const massar_code = String(row.massar_code ?? '').trim()
+      const group_name  = String(row.group_name ?? '').trim()
+
+      if (!name || !massar_code || !group_name) {
+        errors.push(`Ligne ${i + 2}: champs manquants (name, massar_code, group_name requis)`)
+        return
+      }
+
+      const group_id = groupMap.get(group_name.toLowerCase())
+      if (!group_id) {
+        skipped.push(`Ligne ${i + 2}: groupe "${group_name}" introuvable`)
+        return
+      }
+
+      toInsert.push({
+        name, massar_code, group_id,
+        school_id:    profile!.school_id!,
+        parent_name:  String(row.parent_name  ?? '').trim() || undefined,
+        parent_phone: String(row.parent_phone ?? '').trim() || undefined,
+        parent_email: String(row.parent_email ?? '').trim() || undefined,
+      })
+    })
+
+    let inserted = 0
+    if (toInsert.length > 0) {
+      const { data, error } = await supabase
+        .from('students')
+        .insert(toInsert)
+        .select('id')
+
+      if (error) {
+        if (error.code === '23505') {
+          errors.push('Certains étudiants ont été ignorés (code Massar en double).')
+        } else {
+          throw error
+        }
+      } else {
+        inserted = data?.length ?? toInsert.length
+      }
+    }
+
+    return { inserted, skipped, errors }
   }
 
   const handleUpload = async () => {
@@ -48,86 +131,34 @@ export default function BulkStudentUpload() {
     setLoading(true)
     setResult(null)
 
-    Papa.parse<CSVRow>(file, {
-      header:         true,
-      skipEmptyLines: true,
-      complete: async (parsed: ParseResult<CSVRow>) => {
-        try {
-          const supabase = createClient()
+    try {
+      let rows: FileRow[]
 
-          // Fetch groups for this school
-          const { data: groups } = await supabase
-            .from('groups')
-            .select('id, name')
-            .eq('school_id', profile.school_id)
-
-          const groupMap = new Map((groups ?? []).map(g => [g.name.trim().toLowerCase(), g.id]))
-
-          const toInsert: { name: string; massar_code: string; group_id: string; school_id: string; parent_name?: string; parent_phone?: string; parent_email?: string }[] = []
-          const skipped: string[]  = []
-          const errors:  string[]  = []
-
-          parsed.data.forEach((row, i) => {
-            const name        = row.name?.trim()
-            const massar_code = row.massar_code?.trim()
-            const group_name  = row.group_name?.trim()
-
-            if (!name || !massar_code || !group_name) {
-              errors.push(`Row ${i + 2}: missing fields (name, massar_code, group_name required)`)
-              return
-            }
-
-            const group_id = groupMap.get(group_name.toLowerCase())
-            if (!group_id) {
-              skipped.push(`Row ${i + 2}: group "${group_name}" not found`)
-              return
-            }
-
-            toInsert.push({
-              name, massar_code, group_id,
-              school_id:    profile.school_id!,
-              parent_name:  row.parent_name?.trim()  || undefined,
-              parent_phone: row.parent_phone?.trim() || undefined,
-              parent_email: row.parent_email?.trim() || undefined,
-            })
+      if (isExcel(file)) {
+        rows = await parseExcel(file)
+      } else {
+        rows = await new Promise<FileRow[]>((resolve, reject) => {
+          Papa.parse<FileRow>(file, {
+            header: true, skipEmptyLines: true,
+            complete: (r: ParseResult<FileRow>) => resolve(r.data),
+            error:   (err: any) => reject(new Error('CSV parse error: ' + err.message)),
           })
+        })
+      }
 
-          let inserted = 0
-          if (toInsert.length > 0) {
-            const { data, error } = await supabase
-              .from('students')
-              .insert(toInsert)
-              .select('id')
+      const result = await processRows(rows)
+      setResult(result)
 
-            if (error) {
-              // handle duplicate massar_code gracefully
-              if (error.code === '23505') {
-                errors.push('Some students were skipped (duplicate massar code).')
-              } else {
-                throw error
-              }
-            } else {
-              inserted = data?.length ?? toInsert.length
-            }
-          }
-
-          setResult({ inserted, skipped, errors })
-          if (inserted > 0) {
-            fetchStudents()
-            setFile(null)
-            if (fileRef.current) fileRef.current.value = ''
-          }
-        } catch (err: any) {
-          setResult({ inserted: 0, skipped: [], errors: [err.message ?? 'Upload failed'] })
-        } finally {
-          setLoading(false)
-        }
-      },
-      error: (err) => {
-        setResult({ inserted: 0, skipped: [], errors: ['CSV parse error: ' + err.message] })
-        setLoading(false)
-      },
-    })
+      if (result.inserted > 0) {
+        fetchStudents()
+        setFile(null)
+        if (fileRef.current) fileRef.current.value = ''
+      }
+    } catch (err: any) {
+      setResult({ inserted: 0, skipped: [], errors: [err.message ?? 'Upload failed'] })
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -154,7 +185,7 @@ export default function BulkStudentUpload() {
         <input
           ref={fileRef}
           type="file"
-          accept=".csv"
+          accept=".csv,.xlsx,.xls"
           className="hidden"
           onChange={e => pickFile(e.target.files?.[0] ?? null)}
         />
@@ -182,9 +213,11 @@ export default function BulkStudentUpload() {
                 d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
             </svg>
             <p className="text-sm text-slate-400">
-              <span className="text-blue-400 font-medium">Click to upload</span> or drag & drop
+              <span className="text-blue-400 font-medium">Cliquez</span> ou glissez-déposez
             </p>
-            <p className="text-xs text-slate-600">CSV file — columns: <code className="text-slate-500">name, massar_code, group_name</code></p>
+            <p className="text-xs text-slate-600">
+              Fichier <span className="text-green-400 font-medium">.xlsx</span> ou <span className="text-blue-400 font-medium">.csv</span>
+            </p>
           </div>
         )}
       </div>
@@ -202,7 +235,7 @@ export default function BulkStudentUpload() {
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
               </svg>
-              Uploading…
+              Importation…
             </>
           ) : (
             <>
@@ -210,7 +243,7 @@ export default function BulkStudentUpload() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                   d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
               </svg>
-              Import Students
+              Importer les étudiants
             </>
           )}
         </button>
@@ -224,31 +257,29 @@ export default function BulkStudentUpload() {
               <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/>
               </svg>
-              {result.inserted} student{result.inserted !== 1 ? 's' : ''} imported successfully
+              {result.inserted} étudiant{result.inserted !== 1 ? 's' : ''} importé{result.inserted !== 1 ? 's' : ''} avec succès
             </div>
           )}
           {result.skipped.length > 0 && (
             <div className="bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 px-3 py-2.5 rounded-xl space-y-0.5">
-              <p className="font-medium">⚠ {result.skipped.length} row{result.skipped.length !== 1 ? 's' : ''} skipped</p>
+              <p className="font-medium">⚠ {result.skipped.length} ligne{result.skipped.length !== 1 ? 's' : ''} ignorée{result.skipped.length !== 1 ? 's' : ''}</p>
               {result.skipped.map((s, i) => <p key={i} className="text-xs opacity-80">{s}</p>)}
             </div>
           )}
           {result.errors.length > 0 && (
             <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-3 py-2.5 rounded-xl space-y-0.5">
-              <p className="font-medium">✕ {result.errors.length} error{result.errors.length !== 1 ? 's' : ''}</p>
+              <p className="font-medium">✕ {result.errors.length} erreur{result.errors.length !== 1 ? 's' : ''}</p>
               {result.errors.map((e, i) => <p key={i} className="text-xs opacity-80">{e}</p>)}
             </div>
           )}
         </div>
       )}
 
-      {/* CSV format hint */}
+      {/* Format hint */}
       <div className="bg-slate-800/40 border border-slate-800 rounded-xl px-4 py-3">
-        <p className="text-xs font-medium text-slate-500 mb-1.5">Expected CSV format</p>
+        <p className="text-xs font-medium text-slate-500 mb-1.5">Format attendu (Excel ou CSV)</p>
         <code className="text-xs text-slate-400 block leading-relaxed">
-          name,massar_code,group_name,parent_name,parent_phone,parent_email<br/>
-          Ahmed Benali,J123456789,2BAC-1<br/>
-          Sara Alaoui,K987654321,2BAC-2
+          name | massar_code | group_name | parent_name | parent_phone | parent_email
         </code>
       </div>
     </div>
