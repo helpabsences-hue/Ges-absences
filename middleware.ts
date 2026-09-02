@@ -1,16 +1,12 @@
 // src/middleware.ts
 
-import { createServerClient } from '@supabase/ssr'
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 interface CookieToSet {
   name: string
   value: string
-  options?: Record<string, unknown>
-}
-
-interface UserProfile {
-  role: string
+  options?: CookieOptions
 }
 
 export async function middleware(request: NextRequest) {
@@ -48,7 +44,9 @@ export async function middleware(request: NextRequest) {
   const isAuthRoute =
     pathname.startsWith('/auth/login') ||
     pathname.startsWith('/auth/register') ||
-    pathname.startsWith('/auth/invite')
+    pathname.startsWith('/auth/invite') ||
+    pathname.startsWith('/auth/forgot-password') ||
+    pathname.startsWith('/auth/reset-password')
 
   const isApiRoute = pathname.startsWith('/api/')
 
