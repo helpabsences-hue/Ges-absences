@@ -8,7 +8,7 @@ import { SkeletonBlock } from './ReportUI'
 
 interface Labels {
   allFilter: string; absentsFilter: string; latesFilter: string
-  exportCsv: string; noRecords: string; adjustFilters: string
+  exportCsv: string; exportPdf?: string; noRecords: string; adjustFilters: string
   colStudent: string; colClass: string; colCourse: string; colDate: string
   colType: string; colHours: string; colReason: string; colState: string
   absentBadge: string; lateBadge: string
@@ -23,6 +23,7 @@ interface Props {
   filterType:       FilterType
   setFilterType:    (f: FilterType) => void
   onExport:         () => void
+  onExportPdf?:     () => void
   isRtl:            boolean
   dateLocale:       string
   labels:           Labels
@@ -30,7 +31,7 @@ interface Props {
 
 export function ReportDetailsTable({
   loading, absenceRows, filteredAbsences, filterType, setFilterType,
-  onExport, isRtl, dateLocale, labels,
+  onExport, onExportPdf, isRtl, dateLocale, labels,
 }: Props) {
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
@@ -51,13 +52,27 @@ export function ReportDetailsTable({
             </button>
           ))}
         </div>
-        <button onClick={onExport}
-          className={`flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700
-            text-slate-300 hover:text-white text-sm font-medium px-3 sm:px-4 py-2 rounded-xl transition shrink-0
-            ${isRtl ? 'flex-row-reverse' : ''}`}>
-          <Download className="w-4 h-4 shrink-0" />
-          {labels.exportCsv}
-        </button>
+        <div className={`flex items-center gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
+          {onExportPdf && (
+            <button onClick={onExportPdf}
+              className={`flex items-center gap-2 bg-red-600/20 hover:bg-red-600/30 border border-red-500/30
+                text-red-400 hover:text-red-300 text-sm font-medium px-3 sm:px-4 py-2 rounded-xl transition shrink-0
+                ${isRtl ? 'flex-row-reverse' : ''}`}>
+              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+              </svg>
+              {labels.exportPdf ?? 'PDF'}
+            </button>
+          )}
+          <button onClick={onExport}
+            className={`flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700
+              text-slate-300 hover:text-white text-sm font-medium px-3 sm:px-4 py-2 rounded-xl transition shrink-0
+              ${isRtl ? 'flex-row-reverse' : ''}`}>
+            <Download className="w-4 h-4 shrink-0" />
+            {labels.exportCsv}
+          </button>
+        </div>
       </div>
 
       {/* Table */}

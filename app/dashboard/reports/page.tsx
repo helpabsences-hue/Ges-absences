@@ -29,6 +29,7 @@ const UI: Record<Lang, Record<string, string>> = {
     atRisk: 'À risque', records: 'relevés', hours: 'h',
     allFilter: 'Toutes', absentsFilter: 'Absences', latesFilter: 'Retards',
     exportCsv: 'Télécharger Excel',
+    exportPdf: 'Télécharger PDF',
     noRecords: 'Aucun enregistrement', adjustFilters: "Essayez d'ajuster les filtres",
     justified: 'Justifiée', notJustified: 'Non justifiée',
     absentBadge: 'Absent', lateBadge: 'Retard',
@@ -47,6 +48,7 @@ const UI: Record<Lang, Record<string, string>> = {
     atRisk: 'At risk', records: 'records', hours: 'h',
     allFilter: 'All', absentsFilter: 'Absences', latesFilter: 'Lates',
     exportCsv: 'Download Excel',
+    exportPdf: 'Download PDF',
     noRecords: 'No records', adjustFilters: 'Try adjusting your filters',
     justified: 'Justified', notJustified: 'Not justified',
     absentBadge: 'Absent', lateBadge: 'Late',
@@ -65,6 +67,7 @@ const UI: Record<Lang, Record<string, string>> = {
     atRisk: 'في خطر', records: 'سجلات', hours: 'س',
     allFilter: 'الكل', absentsFilter: 'الغيابات', latesFilter: 'التأخيرات',
     exportCsv: 'تنزيل Excel',
+    exportPdf: 'تنزيل PDF',
     noRecords: 'لا توجد سجلات', adjustFilters: 'جرّب تعديل الفلاتر',
     justified: 'مبرّر', notJustified: 'غير مبرّر',
     absentBadge: 'غائب', lateBadge: 'متأخر',
@@ -178,6 +181,16 @@ export default function ReportsPage() {
   const filteredAbsences = absenceRows.filter(r => filterType === 'all' || r.status === filterType)
 
   // ── Excel Export (replaces CSV) ───────────────────────
+  const handleExportPdf = () => {
+    const params = new URLSearchParams({
+      from:  dateFrom,
+      to:    dateTo,
+      lang,
+      ...(selectedGroup ? { group: selectedGroup } : {}),
+    })
+    window.open(`/api/export-pdf?${params.toString()}`, '_blank')
+  }
+
   const handleExportCsv = () => {
     const wb = XLSX.utils.book_new()
 
@@ -333,9 +346,11 @@ export default function ReportsPage() {
           loading={loading} absenceRows={absenceRows}
           filteredAbsences={filteredAbsences} filterType={filterType}
           setFilterType={setFilterType} onExport={handleExportCsv}
+          onExportPdf={handleExportPdf}
           isRtl={isRtl} dateLocale={dateLocale}
           labels={{ allFilter: ui.allFilter, absentsFilter: ui.absentsFilter,
             latesFilter: ui.latesFilter, exportCsv: ui.exportCsv,
+            exportPdf: ui.exportPdf,
             noRecords: ui.noRecords, adjustFilters: ui.adjustFilters,
             colStudent: ui.colStudent, colClass: ui.colClass, colCourse: ui.colCourse,
             colDate: ui.colDate, colType: ui.colType, colHours: ui.colHours,
