@@ -168,7 +168,10 @@ export default function LoginPage() {
 
     await fetchProfile()
     const profile = useAuthStore.getState().profile
-    router.push(profile?.role === 'teacher' ? '/teacher' : '/dashboard')
+    if (profile?.role === 'teacher')        router.push('/teacher')
+    else if (profile?.role === 'parent')    router.push('/parent')
+    else if (profile?.role === 'platform_admin') router.push('/super-admin')
+    else                                    router.push('/dashboard')
   }
 
   return (
