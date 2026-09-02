@@ -1,7 +1,7 @@
 'use client'
 export const dynamic = 'force-dynamic'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { LogoIcon } from '@/components/shared/LogoIcon'
@@ -31,10 +31,52 @@ export default function ParentDashboard() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
     const router = useRouter()
+    const studentIdRef = useRef<string | null>(null)
+    const supabaseRef  = useRef(createClient())
+
+    const loadAttendance = useCallback(async (student_id: string) => {
+        const supabase = supabaseRef.current
+        const { data: attendance } = await supabase
+            .from('attendance')
+            .select(`
+                status,
+                class_sessions!inner(
+                    session_date,
+                    teacher_planning!inner(
+                        start_time,
+                        end_time,
+                        courses!inner(name)
+                    )
+                )
+            `)
+            .eq('student_id', student_id)
+            .order('created_at', { ascending: false })
+
+        const records = (attendance ?? []) as any[]
+        const total   = records.length
+        const present = records.filter(r => r.status === 'present').length
+        const absent  = records.filter(r => r.status === 'absent').length
+        const late    = records.filter(r => r.status === 'late').length
+
+        setStats(prev => prev ? { ...prev, total, present, absent, late } : prev)
+
+        const absenceRows = records
+            .filter(r => (r.status === 'absent' || r.status === 'late') && r.class_sessions?.session_date)
+            .map(r => ({
+                date:   r.class_sessions.session_date,
+                course: r.class_sessions?.teacher_planning?.courses?.name ?? '—',
+                start:  r.class_sessions?.teacher_planning?.start_time?.slice(0, 5) ?? '',
+                end:    r.class_sessions?.teacher_planning?.end_time?.slice(0, 5) ?? '',
+                status: r.status,
+            }))
+            .sort((a, b) => b.date.localeCompare(a.date))
+
+        setAbsences(absenceRows)
+    }, [])
 
     useEffect(() => {
         const load = async () => {
-            const supabase = createClient()
+            const supabase = supabaseRef.current
 
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) { router.push('/auth/login'); return }
@@ -56,65 +98,54 @@ export default function ParentDashboard() {
                 return
             }
 
+            studentIdRef.current = profile.student_id
+
             const { data: student } = await supabase
                 .from('students')
                 .select('name, massar_code, groups(name), schools(name)')
                 .eq('id', profile.student_id)
                 .single()
 
-            // ── Fixed query with !inner joins ──
-            const { data: attendance } = await supabase
-                .from('attendance')
-                .select(`
-                    status,
-                    class_sessions!inner(
-                        session_date,
-                        teacher_planning!inner(
-                            start_time,
-                            end_time,
-                            courses!inner(name)
-                        )
-                    )
-                `)
-                .eq('student_id', profile.student_id)
-                .order('created_at', { ascending: false })
-
-            const records = (attendance ?? []) as any[]
-
-            const total   = records.length
-            const present = records.filter(r => r.status === 'present').length
-            const absent  = records.filter(r => r.status === 'absent').length
-            const late    = records.filter(r => r.status === 'late').length
-
             setStats({
                 name:        student?.name ?? '',
                 massar_code: student?.massar_code ?? '',
                 group_name:  (student as any)?.groups?.name ?? '',
                 school_name: (student as any)?.schools?.name ?? '',
-                total, present, absent, late,
+                total: 0, present: 0, absent: 0, late: 0,
             })
 
-            // ── Filter only valid dates before mapping ──
-            const absenceRows = records
-                .filter(r => (r.status === 'absent' || r.status === 'late') && r.class_sessions?.session_date)
-                .map(r => ({
-                    date:   r.class_sessions.session_date,
-                    course: r.class_sessions?.teacher_planning?.courses?.name ?? '—',
-                    start:  r.class_sessions?.teacher_planning?.start_time?.slice(0, 5) ?? '',
-                    end:    r.class_sessions?.teacher_planning?.end_time?.slice(0, 5) ?? '',
-                    status: r.status,
-                }))
-                .sort((a, b) => b.date.localeCompare(a.date))
-
-            setAbsences(absenceRows)
+            await loadAttendance(profile.student_id)
             setLoading(false)
+
+            // ── Realtime — refresh when attendance changes ──
+            const channel = supabase
+                .channel('parent-attendance-' + profile.student_id)
+                .on('broadcast', { event: 'attendance-saved' }, () => {
+                    if (studentIdRef.current) loadAttendance(studentIdRef.current)
+                })
+                .on('postgres_changes',
+                    { event: '*', schema: 'public', table: 'attendance' },
+                    () => {
+                        if (studentIdRef.current) loadAttendance(studentIdRef.current)
+                    }
+                )
+                .subscribe()
+
+            // ── Polling every 15 seconds as fallback ──
+            const interval = setInterval(() => {
+                if (studentIdRef.current) loadAttendance(studentIdRef.current)
+            }, 15000)
+
+            return () => {
+                supabase.removeChannel(channel)
+                clearInterval(interval)
+            }
         }
         load()
-    }, [])
+    }, [loadAttendance, router])
 
     const handleLogout = async () => {
-        const supabase = createClient()
-        await supabase.auth.signOut()
+        await supabaseRef.current.auth.signOut()
         router.push('/auth/login')
     }
 
