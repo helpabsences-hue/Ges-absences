@@ -23,8 +23,8 @@ const PAGE_TITLES: Record<string, Record<Lang, string>> = {
 }
 
 const ROLE_LABELS: Record<string, Record<Lang, string>> = {
-  super_admin: { fr: 'Super Admin',    en: 'Super Admin', ar: 'مدير عام'  },
-  admin:       { fr: 'Administrateur', en: 'Admin',       ar: 'مدير'      },
+  super_admin: { fr: 'Directeur',    en: 'Director', ar: 'مدير'  },
+  admin:       { fr: 'Administrateur', en: 'Administrator', ar: 'حارس عام'},
   teacher:     { fr: 'Enseignant',     en: 'Teacher',     ar: 'أستاذ'     },
 }
 

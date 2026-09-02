@@ -1,6 +1,6 @@
 // src/types/index.ts
 
-export type Role = 'super_admin' | 'admin' | 'teacher' | 'parent'
+export type Role = 'super_admin' | 'admin' | 'teacher' | 'parent' | 'platform_admin'
 export type AttendanceStatus = 'present' | 'absent' | 'late' | 'unmarked'
 export type InvitationStatus = 'pending' | 'accepted'
 export type Day = 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday'

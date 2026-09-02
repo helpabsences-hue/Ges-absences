@@ -17,104 +17,128 @@ export async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
+        getAll() { return request.cookies.getAll() },
         setAll(cookiesToSet: CookieToSet[]) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          )
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           supabaseResponse = NextResponse.next({ request })
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          )
+            supabaseResponse.cookies.set(name, value, options))
         },
       },
     }
   )
 
-  // Refresh session — must be called before any redirect
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
+  const { data: { user } } = await supabase.auth.getUser()
   const { pathname } = request.nextUrl
 
-  // ── Public routes (no auth needed) ──────────────────────
+  // ── Public routes ────────────────────────────────────────
   const isAuthRoute =
-    pathname.startsWith('/auth/login') ||
-    pathname.startsWith('/auth/register') ||
-    pathname.startsWith('/auth/invite') ||
+    pathname.startsWith('/auth/login')           ||
+    pathname.startsWith('/auth/register')        ||
+    pathname.startsWith('/auth/invite')          ||
     pathname.startsWith('/auth/forgot-password') ||
     pathname.startsWith('/auth/reset-password')
 
-  const isApiRoute = pathname.startsWith('/api/')
+  const isApiRoute  = pathname.startsWith('/api/')
+  const isBlocked   = pathname.startsWith('/blocked')
 
-  // Not logged in and trying to access a protected route
-  if (!user && !isAuthRoute && !isApiRoute) {
+  // Not logged in → login
+  if (!user && !isAuthRoute && !isApiRoute && !isBlocked) {
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'
     return NextResponse.redirect(url)
   }
 
-  // Logged in but hitting root or login page → redirect to correct home
-  if (user && (pathname === '/' || pathname === '/auth/login')) {
+  if (user) {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, school_id')
       .eq('id', user.id)
       .single()
 
-    const url = request.nextUrl.clone()
-    url.pathname = profile?.role === 'teacher' ? '/teacher' : '/dashboard'
-    return NextResponse.redirect(url)
-  }
+    const role = profile?.role
 
-  // Logged-in teacher trying to access /dashboard → send to /teacher
-  if (user && pathname.startsWith('/dashboard')) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
+    // ── platform_admin → only /super-admin ────────────────
+    if (role === 'platform_admin') {
+      if (!pathname.startsWith('/super-admin') && !isApiRoute && !isAuthRoute) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/super-admin'
+        return NextResponse.redirect(url)
+      }
+      return supabaseResponse
+    }
 
-    if (profile?.role === 'teacher') {
+    // ── Block /super-admin for non platform_admin ─────────
+    if (pathname.startsWith('/super-admin')) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/dashboard'
+      return NextResponse.redirect(url)
+    }
+
+    // ── Trial check — only for super_admin and admin ──────
+    if ((role === 'super_admin' || role === 'admin') &&
+        !isAuthRoute && !isApiRoute && !isBlocked &&
+        !pathname.startsWith('/parent') &&
+        !pathname.startsWith('/teacher') &&
+        pathname !== '/') {
+
+      if (profile?.school_id) {
+        const { data: school } = await supabase
+          .from('schools')
+          .select('status, trial_ends_at, paid_until')
+          .eq('id', profile.school_id)
+          .single()
+
+        if (school) {
+          const now       = new Date()
+          const trialEnd  = school.trial_ends_at ? new Date(school.trial_ends_at) : null
+          const paidUntil = school.paid_until    ? new Date(school.paid_until)    : null
+          const isExpired =
+            (school.status === 'trial'  && trialEnd  && trialEnd  < now) ||
+            (school.status === 'active' && paidUntil && paidUntil < now) ||
+            school.status === 'inactive'
+
+          if (isExpired) {
+            const url = request.nextUrl.clone()
+            url.pathname = '/blocked'
+            return NextResponse.redirect(url)
+          }
+        }
+      }
+    }
+
+    // ── Root or login → redirect to correct home ──────────
+    if (pathname === '/' || pathname === '/auth/login') {
+      const url = request.nextUrl.clone()
+      if (role === 'teacher') url.pathname = '/teacher'
+      else if (role === 'parent') url.pathname = '/parent'
+      else url.pathname = '/dashboard'
+      return NextResponse.redirect(url)
+    }
+
+    // ── Teacher trying /dashboard → /teacher ──────────────
+    if (role === 'teacher' && pathname.startsWith('/dashboard')) {
       const url = request.nextUrl.clone()
       url.pathname = '/teacher'
       return NextResponse.redirect(url)
     }
 
-    if (profile?.role === 'parent') {
+    // ── Parent trying /dashboard → /parent ───────────────
+    if (role === 'parent' && pathname.startsWith('/dashboard')) {
       const url = request.nextUrl.clone()
       url.pathname = '/parent'
       return NextResponse.redirect(url)
     }
-  }
 
-  // Logged-in admin/super_admin trying to access /teacher → send to /dashboard
-  if (user && pathname.startsWith('/teacher')) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (profile?.role !== 'teacher') {
+    // ── Non-teacher trying /teacher → /dashboard ─────────
+    if (role !== 'teacher' && pathname.startsWith('/teacher')) {
       const url = request.nextUrl.clone()
       url.pathname = '/dashboard'
       return NextResponse.redirect(url)
     }
-  }
 
-  // Logged-in non-parent trying to access /parent → send to /dashboard
-  if (user && pathname.startsWith('/parent')) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (profile?.role !== 'parent') {
+    // ── Non-parent trying /parent → /dashboard ────────────
+    if (role !== 'parent' && pathname.startsWith('/parent')) {
       const url = request.nextUrl.clone()
       url.pathname = '/dashboard'
       return NextResponse.redirect(url)
@@ -126,12 +150,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all routes except:
-     * - _next/static  (static files)
-     * - _next/image   (image optimization)
-     * - favicon.ico
-     */
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
