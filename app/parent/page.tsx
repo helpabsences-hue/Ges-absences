@@ -36,11 +36,9 @@ export default function ParentDashboard() {
         const load = async () => {
             const supabase = createClient()
 
-            // Get current user
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) { router.push('/auth/login'); return }
 
-            // Get profile with student_id
             const { data: profile } = await supabase
                 .from('profiles')
                 .select('role, student_id, name')
@@ -58,53 +56,52 @@ export default function ParentDashboard() {
                 return
             }
 
-            // Get student info
             const { data: student } = await supabase
                 .from('students')
                 .select('name, massar_code, groups(name), schools(name)')
                 .eq('id', profile.student_id)
                 .single()
 
-            // Get all attendance for this student
+            // ── Fixed query with !inner joins ──
             const { data: attendance } = await supabase
                 .from('attendance')
                 .select(`
-          status,
-          class_sessions(
-            session_date,
-            teacher_planning(
-              start_time, end_time,
-              courses(name)
-            )
-          )
-        `)
+                    status,
+                    class_sessions!inner(
+                        session_date,
+                        teacher_planning!inner(
+                            start_time,
+                            end_time,
+                            courses!inner(name)
+                        )
+                    )
+                `)
                 .eq('student_id', profile.student_id)
                 .order('created_at', { ascending: false })
 
             const records = (attendance ?? []) as any[]
 
-            // Build stats
-            const total = records.length
+            const total   = records.length
             const present = records.filter(r => r.status === 'present').length
-            const absent = records.filter(r => r.status === 'absent').length
-            const late = records.filter(r => r.status === 'late').length
+            const absent  = records.filter(r => r.status === 'absent').length
+            const late    = records.filter(r => r.status === 'late').length
 
             setStats({
-                name: student?.name ?? '',
+                name:        student?.name ?? '',
                 massar_code: student?.massar_code ?? '',
-                group_name: (student as any)?.groups?.name ?? '',
+                group_name:  (student as any)?.groups?.name ?? '',
                 school_name: (student as any)?.schools?.name ?? '',
                 total, present, absent, late,
             })
 
-            // Build absence/late records for table
+            // ── Filter only valid dates before mapping ──
             const absenceRows = records
-                .filter(r => r.status === 'absent' || r.status === 'late')
+                .filter(r => (r.status === 'absent' || r.status === 'late') && r.class_sessions?.session_date)
                 .map(r => ({
-                    date: r.class_sessions?.session_date ?? '',
+                    date:   r.class_sessions.session_date,
                     course: r.class_sessions?.teacher_planning?.courses?.name ?? '—',
-                    start: r.class_sessions?.teacher_planning?.start_time?.slice(0, 5) ?? '',
-                    end: r.class_sessions?.teacher_planning?.end_time?.slice(0, 5) ?? '',
+                    start:  r.class_sessions?.teacher_planning?.start_time?.slice(0, 5) ?? '',
+                    end:    r.class_sessions?.teacher_planning?.end_time?.slice(0, 5) ?? '',
                     status: r.status,
                 }))
                 .sort((a, b) => b.date.localeCompare(a.date))
@@ -145,10 +142,9 @@ export default function ParentDashboard() {
     return (
         <div className="min-h-screen bg-slate-950 text-white">
 
-            {/* ── Header — full width ── */}
+            {/* Header */}
             <div className="bg-slate-900/80 backdrop-blur border-b border-slate-800 px-4 sm:px-6 py-3 sticky top-0 z-10">
                 <div className="flex items-center justify-between">
-                    {/* Logo */}
                     <div className="flex items-center gap-2">
                         <LogoIcon />
                         <div>
@@ -158,8 +154,6 @@ export default function ParentDashboard() {
                             <span className="text-slate-500 text-xs sm:text-sm font-normal ml-2">— {stats?.school_name}</span>
                         </div>
                     </div>
-
-                    {/* User + sign-out — same as teacher shell */}
                     <div className="flex items-center gap-3">
                         <div className="text-right hidden sm:block">
                             <p className="text-sm font-medium text-white leading-tight">{stats?.name}</p>
@@ -189,25 +183,19 @@ export default function ParentDashboard() {
                     <p className="text-blue-200 text-xs font-medium mb-1">Votre enfant</p>
                     <h2 className="text-xl font-bold text-white">{stats?.name}</h2>
                     <div className="flex flex-wrap gap-3 mt-3">
-                        <span className="bg-white/10 text-white text-xs px-2.5 py-1 rounded-lg">
-                            {stats?.group_name}
-                        </span>
-                        <span className="bg-white/10 text-white text-xs px-2.5 py-1 rounded-lg">
-                            {stats?.massar_code}
-                        </span>
-                        <span className="bg-white/10 text-white text-xs px-2.5 py-1 rounded-lg">
-                            {stats?.school_name}
-                        </span>
+                        <span className="bg-white/10 text-white text-xs px-2.5 py-1 rounded-lg">{stats?.group_name}</span>
+                        <span className="bg-white/10 text-white text-xs px-2.5 py-1 rounded-lg">{stats?.massar_code}</span>
+                        <span className="bg-white/10 text-white text-xs px-2.5 py-1 rounded-lg">{stats?.school_name}</span>
                     </div>
                 </div>
 
                 {/* Stats */}
                 <div className="grid grid-cols-2 gap-3">
                     {[
-                        { label: 'Taux de présence', value: rate + '%', color: rate >= 80 ? 'text-green-400' : rate >= 60 ? 'text-amber-400' : 'text-red-400', bg: 'bg-slate-900' },
-                        { label: 'Total séances', value: stats?.total, color: 'text-white', bg: 'bg-slate-900' },
-                        { label: 'Absences', value: stats?.absent, color: 'text-red-400', bg: 'bg-red-500/10' },
-                        { label: 'Retards', value: stats?.late, color: 'text-amber-400', bg: 'bg-amber-500/10' },
+                        { label: 'Taux de présence', value: rate + '%',      color: rate >= 80 ? 'text-green-400' : rate >= 60 ? 'text-amber-400' : 'text-red-400', bg: 'bg-slate-900' },
+                        { label: 'Total séances',    value: stats?.total,    color: 'text-white',      bg: 'bg-slate-900'      },
+                        { label: 'Absences',         value: stats?.absent,   color: 'text-red-400',    bg: 'bg-red-500/10'    },
+                        { label: 'Retards',          value: stats?.late,     color: 'text-amber-400',  bg: 'bg-amber-500/10'  },
                     ].map(s => (
                         <div key={s.label} className={`${s.bg} border border-slate-800 rounded-2xl p-4`}>
                             <p className="text-xs text-slate-500 mb-1">{s.label}</p>
@@ -220,7 +208,9 @@ export default function ParentDashboard() {
                 <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
                     <div className="px-5 py-4 border-b border-slate-800">
                         <h3 className="font-semibold text-white text-sm">Historique des absences et retards</h3>
-                        <p className="text-xs text-slate-500 mt-0.5">{absences.length} enregistrement{absences.length !== 1 ? 's' : ''}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                            {absences.length} enregistrement{absences.length !== 1 ? 's' : ''}
+                        </p>
                     </div>
 
                     {absences.length === 0 ? (
@@ -235,15 +225,16 @@ export default function ParentDashboard() {
                                     <div>
                                         <p className="text-sm font-medium text-white">{a.course}</p>
                                         <p className="text-xs text-slate-500 mt-0.5">
-                                            {new Date(a.date).toLocaleDateString('fr-FR', {
+                                            {new Date(a.date + 'T00:00:00').toLocaleDateString('fr-FR', {
                                                 weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
                                             })} · {a.start}–{a.end}
                                         </p>
                                     </div>
-                                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-lg ${a.status === 'absent'
-                                        ? 'bg-red-500/15 text-red-400'
-                                        : 'bg-amber-500/15 text-amber-400'
-                                        }`}>
+                                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-lg ${
+                                        a.status === 'absent'
+                                            ? 'bg-red-500/15 text-red-400'
+                                            : 'bg-amber-500/15 text-amber-400'
+                                    }`}>
                                         {a.status === 'absent' ? 'Absent' : 'Retard'}
                                     </span>
                                 </div>
