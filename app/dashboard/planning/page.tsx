@@ -422,20 +422,20 @@ export default function PlanningPage() {
                               <div className={`flex items-center gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
                                 <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">
                                   <span className="text-xs font-bold text-green-400">
-                                    {slot.profiles.name.charAt(0).toUpperCase()}
+                                    {slot.profiles?.name?.charAt(0).toUpperCase() ?? '?'}
                                   </span>
                                 </div>
-                                <span className="text-xs sm:text-sm text-white">{slot.profiles.name}</span>
+                                <span className="text-xs sm:text-sm text-white">{slot.profiles?.name ?? '—'}</span>
                               </div>
                             </td>
                             <td className="px-4 sm:px-5 py-3 sm:py-3.5">
                               <span className="text-xs bg-slate-800 text-slate-300 font-medium px-2 py-1 rounded-lg whitespace-nowrap">
-                                {slot.groups.name}
-                                <span className="text-slate-500 ml-1">{ui.year}{slot.groups.year}</span>
+                                {slot.groups?.name ?? '—'}
+                                <span className="text-slate-500 ml-1">{ui.year}{slot.groups?.year}</span>
                               </span>
                             </td>
                             <td className="px-4 sm:px-5 py-3 sm:py-3.5">
-                              <span className="text-xs sm:text-sm text-slate-300">{slot.courses.name}</span>
+                              <span className="text-xs sm:text-sm text-slate-300">{slot.courses?.name ?? '—'}</span>
                             </td>
                             <td className="px-4 sm:px-5 py-3 sm:py-3.5">
                               <div className={`flex items-center gap-1 opacity-0 group-hover:opacity-100 transition

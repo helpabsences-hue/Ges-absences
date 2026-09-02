@@ -28,24 +28,7 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col h-full p-3 sm:p-4 md:p-6 w-full space-y-4 md:space-y-6">
 
-      {/* Page header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-foreground">
-            {TITLES[lang]}
-          </h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-            {DESCS[lang]}
-          </p>
-        </div>
-
-        {/* Role badge */}
-        {profile?.role && ROLE_LABELS[profile.role] && (
-          <span className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full bg-violet-500/15 text-violet-400 border border-violet-500/30">
-            {ROLE_LABELS[profile.role]}
-          </span>
-        )}
-      </div>
+      
 
       {/* Stat cards */}
       <AdminStats lang={lang} />
