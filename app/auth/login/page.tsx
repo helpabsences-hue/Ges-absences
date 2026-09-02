@@ -68,7 +68,6 @@ export default function LoginPage() {
   const [newPwd,     setNewPwd]     = useState('')
   const [confirmPwd, setConfirmPwd] = useState('')
   const [pwdSaved,   setPwdSaved]   = useState(false)
-  const [checking,   setChecking]   = useState(true)
 
   useEffect(() => {
     const hash   = window.location.hash.substring(1)
@@ -78,21 +77,11 @@ export default function LoginPage() {
     const refresh = params.get('refresh_token') ?? ''
 
     if ((type === 'recovery' || type === 'invite') && token) {
-      // Set session directly — no redirect needed
+      window.history.replaceState({}, '', '/auth/login')
       const supabase = createClient()
       supabase.auth.setSession({ access_token: token, refresh_token: refresh })
-        .then(() => {
-          window.history.replaceState({}, '', '/auth/login')
-          setIsRecovery(true)
-          setChecking(false)
-        })
-        .catch(() => {
-          setIsRecovery(true)
-          setChecking(false)
-        })
-      return
+        .finally(() => setIsRecovery(true))
     }
-    setChecking(false)
   }, [])
 
   const handleSetPassword = async (e: React.FormEvent) => {
@@ -108,12 +97,6 @@ export default function LoginPage() {
     setLoading(false)
     setTimeout(() => router.push('/auth/login'), 2000)
   }
-
-  if (checking) return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex items-center justify-center">
-      <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"/>
-    </div>
-  )
 
   // Show password creation form for parent invitation
   if (isRecovery) return (
