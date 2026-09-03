@@ -19,7 +19,7 @@ export async function getProfile(): Promise<ProfileWithSchool | null> {
     .from('profiles')
     .select('*, schools(*)')
     .eq('id', user.id)
-    .single()
+    .maybeSingle()
 
   if (error || !data) return null
 
@@ -27,7 +27,6 @@ export async function getProfile(): Promise<ProfileWithSchool | null> {
 }
 
 // ─── Require auth — redirect to login if not signed in ────
-// Optionally restrict to specific roles
 export async function requireAuth(allowedRoles?: Role[]): Promise<ProfileWithSchool> {
   const profile = await getProfile()
 
@@ -36,8 +35,9 @@ export async function requireAuth(allowedRoles?: Role[]): Promise<ProfileWithSch
   }
 
   if (allowedRoles && !allowedRoles.includes(profile.role)) {
-    // Wrong role — send to the correct home
-    if (profile.role === 'teacher') redirect('/teacher')
+    if (profile.role === 'teacher')          redirect('/teacher')
+    else if (profile.role === 'parent')      redirect('/parent')
+    else if (profile.role === 'platform_admin') redirect('/super-admin')
     else redirect('/dashboard')
   }
 
