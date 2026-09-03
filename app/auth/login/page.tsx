@@ -324,15 +324,16 @@ function InstallBanner() {
     <div className="mt-4 bg-slate-800/60 border border-slate-700/50 rounded-xl px-4 py-3 space-y-2">
       {/* iOS toast */}
       {iosMsg && (
-        <div className="fixed bottom-6 left-4 right-4 z-50 bg-slate-800 border border-slate-600 rounded-2xl px-4 py-3 shadow-2xl flex items-start gap-3 animate-in slide-in-from-bottom-4">
-          <span className="text-xl">📱</span>
-          <div>
+        <div style={{ position: 'fixed', bottom: '24px', left: '16px', right: '16px', zIndex: 9999 }}
+          className="bg-slate-800 border border-slate-600 rounded-2xl px-4 py-3 shadow-2xl flex items-start gap-3">
+          <span className="text-xl shrink-0">📱</span>
+          <div className="flex-1">
             <p className="text-sm font-semibold text-white">Installer sur iPhone</p>
             <p className="text-xs text-slate-300 mt-0.5">
-              Appuyez sur <strong>Partager</strong> (↑) puis <strong>"Sur l'écran d'accueil"</strong>
+              Appuyez sur <strong>Partager</strong> (↑) en bas de Safari, puis <strong>"Sur l'écran d'accueil"</strong>
             </p>
           </div>
-          <button onClick={() => setIosMsg(false)} className="ml-auto text-slate-500 hover:text-white shrink-0">✕</button>
+          <button onClick={() => setIosMsg(false)} className="text-slate-400 hover:text-white shrink-0 text-lg leading-none">✕</button>
         </div>
       )}
       <div className="flex items-center justify-between gap-3">
