@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
       city,
       country:       'Morocco',
       status:        'trial',
-      trial_ends_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+      trial_ends_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
     })
     .select()
     .single()
