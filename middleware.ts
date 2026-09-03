@@ -66,12 +66,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // ── Root / login → correct home ───────────────────────
+  // ── Root → correct home ───────────────────────────────
   if (pathname === '/') {
     const url = request.nextUrl.clone()
-    if (role === 'teacher')      url.pathname = '/teacher'
-    else if (role === 'parent')  url.pathname = '/parent'
-    else                         url.pathname = '/dashboard'
+    if (role === 'teacher')     url.pathname = '/teacher'
+    else if (role === 'parent') url.pathname = '/parent'
+    else                        url.pathname = '/dashboard'
     return NextResponse.redirect(url)
   }
 
@@ -117,8 +117,8 @@ export async function middleware(request: NextRequest) {
       const paidUntil = school.paid_until    ? new Date(school.paid_until)    : null
 
       const isExpired =
-        (school.status === 'trial'    && trialEnd  && trialEnd  < now) ||
-        (school.status === 'active'   && paidUntil && paidUntil < now) ||
+        (school.status === 'trial'  && trialEnd  && trialEnd  < now) ||
+        (school.status === 'active' && paidUntil && paidUntil < now) ||
         school.status === 'inactive'
 
       if (isExpired) {
