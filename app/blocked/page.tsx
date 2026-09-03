@@ -22,7 +22,7 @@ export default function BlockedPage() {
         <div className="w-20 h-20 bg-red-500/10 border border-red-500/20 rounded-full flex items-center justify-center mx-auto">
           <svg className="w-10 h-10 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
         </div>
 
@@ -46,14 +46,18 @@ export default function BlockedPage() {
           </div>
 
           <div className="space-y-2">
-            <a href="mailto:med.himri@attendefy.com"
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText('med.himri@attendefy.com')
+                alert('Email copié !')
+              }}
               className="flex items-center justify-center gap-2 w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 rounded-xl transition text-sm">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
               med.himri@attendefy.com
-            </a>
+            </button>
             <a href="https://wa.me/212628395183" target="_blank"
               className="flex items-center justify-center gap-2 w-full bg-green-600/20 hover:bg-green-600/30 text-green-400 border border-green-500/30 font-semibold py-3 rounded-xl transition text-sm">
               WhatsApp
