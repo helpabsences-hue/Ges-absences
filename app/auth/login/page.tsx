@@ -316,12 +316,25 @@ function InstallBanner() {
   if (!show) return null
 
   const handleInstall = async () => {
-    if (ios) { setIosMsg(true); return }
+    if (ios) { setIosMsg(true); setTimeout(() => setIosMsg(false), 6000); return }
     if (prompt) { prompt.prompt(); const { outcome } = await prompt.userChoice; if (outcome === 'accepted') setShow(false) }
   }
 
   return (
     <div className="mt-4 bg-slate-800/60 border border-slate-700/50 rounded-xl px-4 py-3 space-y-2">
+      {/* iOS toast */}
+      {iosMsg && (
+        <div className="fixed bottom-6 left-4 right-4 z-50 bg-slate-800 border border-slate-600 rounded-2xl px-4 py-3 shadow-2xl flex items-start gap-3 animate-in slide-in-from-bottom-4">
+          <span className="text-xl">📱</span>
+          <div>
+            <p className="text-sm font-semibold text-white">Installer sur iPhone</p>
+            <p className="text-xs text-slate-300 mt-0.5">
+              Appuyez sur <strong>Partager</strong> (↑) puis <strong>"Sur l'écran d'accueil"</strong>
+            </p>
+          </div>
+          <button onClick={() => setIosMsg(false)} className="ml-auto text-slate-500 hover:text-white shrink-0">✕</button>
+        </div>
+      )}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-blue-600/20 rounded-lg flex items-center justify-center shrink-0">
@@ -340,11 +353,6 @@ function InstallBanner() {
           Installer
         </button>
       </div>
-      {iosMsg && (
-        <div className="bg-slate-700/50 rounded-lg px-3 py-2 text-xs text-slate-300 leading-relaxed">
-          📱 Safari → Appuyez sur <strong>Partager</strong> → <strong>Sur l'écran d'accueil</strong>
-        </div>
-      )}
     </div>
   )
 }

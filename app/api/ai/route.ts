@@ -106,14 +106,25 @@ function buildStats(rows: any[], alerts: any[] = []) {
   const byStudent: Record<string, any> = {}
   for (const r of rows) {
     const name = r.students?.name ?? 'Inconnu'
-    if (!byStudent[name]) byStudent[name] = { name, absent: 0, late: 0, total: 0, days: [] }
+    if (!byStudent[name]) byStudent[name] = {
+      name, absent: 0, late: 0, total: 0,
+      days: [], subjects: {}, subjectDays: []
+    }
     byStudent[name].total++
+
+    const date    = r.class_sessions?.session_date
+    const course  = r.class_sessions?.teacher_planning?.courses?.name ?? '—'
+    const dayName = date ? new Date(date + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long' }) : ''
+
     if (r.status === 'absent') {
       byStudent[name].absent++
-      const date = r.class_sessions?.session_date
-      if (date) {
-        const day = new Date(date).toLocaleDateString('en', { weekday: 'long' })
-        byStudent[name].days.push(day)
+      if (dayName) byStudent[name].days.push(dayName)
+      // Track per subject
+      if (!byStudent[name].subjects[course]) byStudent[name].subjects[course] = 0
+      byStudent[name].subjects[course]++
+      // Track subject + day combo
+      if (dayName && course !== '—') {
+        byStudent[name].subjectDays.push(`${course} (${dayName})`)
       }
     }
     if (r.status === 'late') byStudent[name].late++
@@ -219,18 +230,29 @@ function buildSystemPrompt(stats: any, adminName: string, langStr: string) {
     .filter((s: any) => s.total > 0 && s.absent / s.total > 0.25)
 
   return [
-    'Tu es un assistant IA dans Attendify (gestion absences scolaires).',
+    'Tu es un assistant IA dans Attendefy (gestion absences scolaires).',
     'Tu aides ' + adminName + '. Réponds en ' + langStr + '. Sois concis et professionnel.',
     '',
     '=== STATISTIQUES GÉNÉRALES ===',
     'Total relevés: ' + total + ' | Absences: ' + absents + ' (' + pct(absents) + '%) | Retards: ' + lates + ' | Présents: ' + stats.presents,
     '',
     '=== ÉTUDIANTS LES PLUS ABSENTS ===',
-    topAbsent.map((s: any) => s.name + ': ' + s.absent + ' abs/' + s.total + ' séances (' + Math.round(s.absent/s.total*100) + '%)').join(' | '),
+    topAbsent.map((s: any) => {
+      const subjectSummary = Object.entries(s.subjects ?? {})
+        .map(([subj, count]: any) => `${subj}(${count}x)`)
+        .join(', ')
+      const rate = s.total > 0 ? Math.round(s.absent / s.total * 100) : 0
+      return `${s.name}: ${s.absent} abs/${s.total} séances (${rate}%)${subjectSummary ? ' — matières: ' + subjectSummary : ''}`
+    }).join(' | '),
     '',
     '=== ÉTUDIANTS À RISQUE (>25%) ===',
     atRisk.length > 0
-      ? atRisk.map((s: any) => s.name + ' (' + Math.round(s.absent/s.total*100) + '%)').join(', ')
+      ? atRisk.map((s: any) => {
+          const rate = Math.round(s.absent/s.total*100)
+          const topSubject = Object.entries(s.subjects ?? {})
+            .sort((a: any, b: any) => b[1] - a[1])[0]
+          return `${s.name} (${rate}%)${topSubject ? ' — plus absent en: ' + topSubject[0] : ''}`
+        }).join(', ')
       : 'Aucun étudiant à risque détecté',
     '',
     '=== CLASSES LES PLUS ABSENTÉISTES ===',
