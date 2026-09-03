@@ -91,7 +91,39 @@ export default function ReportsPage() {
   const [groupStats,    setGroupStats]    = useState<GroupStat[]>([])
   const [studentStats,  setStudentStats]  = useState<StudentStat[]>([])
   const [reasonData,    setReasonData]    = useState<{ name: string; value: number; fill: string }[]>([])
+  const [schoolYears, setSchoolYears] = useState<{ label: string; from: string; to: string }[]>([])
   const [absenceRows,   setAbsenceRows]   = useState<AbsenceRow[]>([])
+
+  // Fetch distinct school years from class_sessions
+  useEffect(() => {
+    const fetchYears = async () => {
+      const supabase = createClient()
+      const { data } = await supabase
+        .from('class_sessions')
+        .select('session_date')
+        .order('session_date', { ascending: true })
+
+      if (!data || data.length === 0) return
+
+      const yearSet = new Set<number>()
+      data.forEach((r: any) => {
+        if (!r.session_date) return
+        const d = new Date(r.session_date)
+        const month = d.getMonth()
+        const startYear = month >= 8 ? d.getFullYear() : d.getFullYear() - 1
+        yearSet.add(startYear)
+      })
+
+      const years = Array.from(yearSet).sort((a, b) => b - a).map(startYear => ({
+        label: `${startYear}–${startYear + 1}`,
+        from:  `${startYear}-09-01`,
+        to:    `${startYear + 1}-06-30`,
+      }))
+
+      setSchoolYears(years)
+    }
+    fetchYears()
+  }, [])
   const [totals,        setTotals]        = useState({ sessions: 0, present: 0, absent: 0, late: 0 })
   const [loading,       setLoading]       = useState(false)
 
@@ -178,7 +210,7 @@ export default function ReportsPage() {
 
   useEffect(() => { loadReport() }, [loadReport])
 
-  const filteredAbsences = absenceRows.filter(r => filterType === 'all' || r.status === filterType)
+  const filteredAbsences = absenceRows.filter((r: AbsenceRow) => filterType === 'all' || r.status === filterType)
 
   // ── Excel Export (replaces CSV) ───────────────────────
   const handleExportPdf = () => {
@@ -257,6 +289,53 @@ export default function ReportsPage() {
 
       {/* Filters */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl px-4 sm:px-5 py-4">
+
+        {/* School year quick selector */}
+        {schoolYears.length > 0 && (
+          <div className="mb-4">
+            <label className={`block text-xs font-medium text-slate-400 mb-2 ${isRtl ? 'text-right' : ''}`}>
+              {lang === 'ar' ? 'السنة الدراسية' : lang === 'en' ? 'School Year' : 'Année scolaire'}
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {schoolYears.map(y => {
+                const isActive = dateFrom === y.from && dateTo === y.to
+                return (
+                  <button key={y.label}
+                    onClick={() => { setDateFrom(y.from); setDateTo(y.to) }}
+                    className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition ${
+                      isActive
+                        ? 'bg-blue-600 border-blue-500 text-white'
+                        : 'bg-slate-800 border-slate-700 text-slate-300 hover:border-blue-500 hover:text-white'
+                    }`}>
+                    {y.label}
+                  </button>
+                )
+              })}
+              {/* Quick shortcuts */}
+              <button
+                onClick={() => {
+                  const now = new Date()
+                  const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+                  setDateFrom(monthStart)
+                  setDateTo(now.toISOString().split('T')[0])
+                }}
+                className="text-xs font-semibold px-3 py-1.5 rounded-lg border bg-slate-800 border-slate-700 text-slate-300 hover:border-blue-500 hover:text-white transition">
+                {lang === 'ar' ? 'هذا الشهر' : lang === 'en' ? 'This month' : 'Ce mois'}
+              </button>
+              <button
+                onClick={() => {
+                  const now = new Date()
+                  const last30 = new Date(now.getTime() - 30 * 86400000).toISOString().split('T')[0]
+                  setDateFrom(last30)
+                  setDateTo(now.toISOString().split('T')[0])
+                }}
+                className="text-xs font-semibold px-3 py-1.5 rounded-lg border bg-slate-800 border-slate-700 text-slate-300 hover:border-blue-500 hover:text-white transition">
+                {lang === 'ar' ? '30 يوم' : lang === 'en' ? 'Last 30 days' : '30 derniers jours'}
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className={`flex flex-wrap items-end gap-3 sm:gap-4 ${isRtl ? 'flex-row-reverse' : ''}`}>
           <div>
             <label className={`block text-xs font-medium text-slate-400 mb-1.5 ${isRtl ? 'text-right' : ''}`}>{ui.dateFrom}</label>
