@@ -321,10 +321,10 @@ function InstallBanner() {
   }
 
   return (
-    <div className="mt-4 bg-slate-800/60 border border-slate-700/50 rounded-xl px-4 py-3 space-y-2">
-      {/* iOS toast */}
+    <>
+      {/* iOS floating toast — rendered separately so fixed positioning works */}
       {iosMsg && (
-        <div style={{ position: 'fixed', bottom: '24px', left: '16px', right: '16px', zIndex: 9999 }}
+        <div style={{ position: 'fixed', bottom: '90px', left: '16px', right: '16px', zIndex: 9999 }}
           className="bg-slate-800 border border-slate-600 rounded-2xl px-4 py-3 shadow-2xl flex items-start gap-3">
           <span className="text-xl shrink-0">📱</span>
           <div className="flex-1">
@@ -336,7 +336,9 @@ function InstallBanner() {
           <button onClick={() => setIosMsg(false)} className="text-slate-400 hover:text-white shrink-0 text-lg leading-none">✕</button>
         </div>
       )}
-      <div className="flex items-center justify-between gap-3">
+
+      {/* Install banner */}
+      <div className="mt-4 bg-slate-800/60 border border-slate-700/50 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-blue-600/20 rounded-lg flex items-center justify-center shrink-0">
             <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -354,7 +356,7 @@ function InstallBanner() {
           Installer
         </button>
       </div>
-    </div>
+    </>
   )
 }
 
