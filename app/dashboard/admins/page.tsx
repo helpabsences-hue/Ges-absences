@@ -110,7 +110,7 @@ export default function AdminsPage() {
   )
 
   return (
-    <div className={`max-w-5xl mx-auto space-y-4 sm:space-y-6 ${isRtl ? 'text-right' : ''}`}>
+    <div className={`max-w-6xl mx-auto space-y-4 sm:space-y-6 ${isRtl ? 'text-right' : ''}`}>
 
       {/* Header */}
       <div className={`flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-0 sm:justify-between ${isRtl ? 'sm:flex-row-reverse' : ''}`}>

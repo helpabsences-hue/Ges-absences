@@ -135,7 +135,7 @@ export default function InvitationsPage() {
     r === 'admin' ? ui.roleAdmin : ui.roleTeacher
 
   return (
-    <div className={`max-w-4xl mx-auto space-y-4 sm:space-y-6 ${isRtl ? 'text-right' : ''}`}>
+    <div className={`max-w-6xl mx-auto space-y-4 sm:space-y-6 ${isRtl ? 'text-right' : ''}`}>
 
       {/* ── Header ───────────────────────────────────── */}
       <div>

@@ -187,7 +187,7 @@ export default function AIPage() {
   const tabInactive = "text-slate-500 hover:text-slate-300"
 
   return (
-    <div className={`max-w-4xl mx-auto space-y-4 ${isRtl ? 'text-right' : ''}`} dir={isRtl ? 'rtl' : 'ltr'}>
+    <div className={`max-w-6xl mx-auto space-y-4 ${isRtl ? 'text-right' : ''}`} dir={isRtl ? 'rtl' : 'ltr'}>
 
       {/* ── Header ── */}
       <div className={`flex items-center gap-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
