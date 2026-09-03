@@ -294,6 +294,61 @@ import { useAuthStore } from '@/stores/useAuthStore'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { LogoIcon } from '@/components/shared/LogoIcon'
 
+// ── PWA Install Banner ─────────────────────────────────────
+function InstallBanner() {
+  const [prompt, setPrompt] = useState<any>(null)
+  const [show,   setShow]   = useState(false)
+  const [ios,    setIos]    = useState(false)
+  const [iosMsg, setIosMsg] = useState(false)
+
+  useEffect(() => {
+    // Detect iOS
+    const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent)
+    const isInStandaloneMode = (window.navigator as any).standalone === true
+    if (isIos && !isInStandaloneMode) { setIos(true); setShow(true) }
+
+    // Android/Chrome install prompt
+    const handler = (e: any) => { e.preventDefault(); setPrompt(e); setShow(true) }
+    window.addEventListener('beforeinstallprompt', handler)
+    return () => window.removeEventListener('beforeinstallprompt', handler)
+  }, [])
+
+  if (!show) return null
+
+  const handleInstall = async () => {
+    if (ios) { setIosMsg(true); return }
+    if (prompt) { prompt.prompt(); const { outcome } = await prompt.userChoice; if (outcome === 'accepted') setShow(false) }
+  }
+
+  return (
+    <div className="mt-4 bg-slate-800/60 border border-slate-700/50 rounded-xl px-4 py-3 space-y-2">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-blue-600/20 rounded-lg flex items-center justify-center shrink-0">
+            <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+            </svg>
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-white">Installez Attendefy</p>
+            <p className="text-xs text-slate-400">Accès rapide depuis votre téléphone</p>
+          </div>
+        </div>
+        <button onClick={handleInstall}
+          className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white transition">
+          Installer
+        </button>
+      </div>
+      {iosMsg && (
+        <div className="bg-slate-700/50 rounded-lg px-3 py-2 text-xs text-slate-300 leading-relaxed">
+          📱 Safari → Appuyez sur <strong>Partager</strong> → <strong>Sur l'écran d'accueil</strong>
+        </div>
+      )}
+    </div>
+  )
+}
+
 type Lang = 'fr' | 'en' | 'ar'
 
 const UI: Record<Lang, {
@@ -560,31 +615,7 @@ export default function LoginPage() {
           </p>
 
           {/* Install app banner */}
-          <div className="mt-4 bg-slate-800/60 border border-slate-700/50 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-blue-600/20 rounded-lg flex items-center justify-center shrink-0">
-                <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-                </svg>
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-white">Installez Attendefy</p>
-                <p className="text-xs text-slate-400">Accès rapide depuis votre téléphone</p>
-              </div>
-            </div>
-            <button
-              onClick={() => {
-                if ('serviceWorker' in navigator) {
-                  window.dispatchEvent(new Event('pwa-install'))
-                } else {
-                  alert("Sur iPhone : Safari → Partager → Sur l'écran d'accueil\nSur Android : Menu → Installer l'application")
-                }
-              }}
-              className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white transition">
-              Installer
-            </button>
-          </div>
+          <InstallBanner />
         </div>
       </div>
     </div>
