@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 
 export default function BlockedPage() {
   const router = useRouter()
@@ -49,7 +50,7 @@ export default function BlockedPage() {
             <button
               onClick={() => {
                 navigator.clipboard.writeText('med.himri@attendefy.com')
-                alert('Email copié !')
+                toast('Email copié !')
               }}
               className="flex items-center justify-center gap-2 w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 rounded-xl transition text-sm">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
