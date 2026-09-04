@@ -18,7 +18,7 @@ async function ask(prompt: string, system?: string): Promise<string> {
   const completion = await getGroq().chat.completions.create({
     model: MODEL,
     messages,
-    max_tokens:  1500,
+    max_tokens:  800,
     temperature: 0.7,
     reasoning_effort: 'none', // disable thinking blocks
   } as any)
