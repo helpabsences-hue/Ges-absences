@@ -32,7 +32,6 @@ const UI: Record<Lang, { school: string; signOut: string }> = {
   ar: { school: 'المدرسة', signOut: 'تسجيل الخروج' },
 }
 
-// smaller icon size w-4 h-4 so all items fit without scroll
 const IC = 'w-[17px] h-[17px] shrink-0'
 
 interface NavItem { href: string; roles: Role[]; icon: React.ReactNode }
@@ -104,12 +103,12 @@ export default function Sidebar() {
           className={`flex items-center gap-2 mb-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
           <LogoIcon className="w-8 h-8 shrink-0" />
           <span className="text-lg font-bold tracking-tight text-white">
-            Attend<span className="text-blue-400">ify</span>
+            Attend<span className="text-blue-400">efy</span>
           </span>
         </Link>
 
         <div className={`bg-slate-800/50 border border-slate-700 rounded-xl px-3 py-2 ${isRtl ? 'text-right' : ''}`}>
-          <span className="text-[9px] font-bold uppercase tracking-widest text-blue-400 block">
+          <span className="text-[9px] font-bold uppercase tracking-widest text-blue-600 block">
             {ui.school}
           </span>
           <span className="text-xs font-semibold text-white truncate block mt-0.5">
@@ -121,7 +120,7 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* ── Nav — compact items to fit all 12 ── */}
+      {/* ── Nav ── */}
       <nav className="flex-1 min-h-0 px-2 py-1.5 space-y-0.5 overflow-hidden">
         {visibleNav.map((item) => {
           const active = isActive(item.href)
@@ -134,14 +133,19 @@ export default function Sidebar() {
                 transition-all duration-150 group
                 ${isRtl ? 'flex-row-reverse' : ''}
                 ${active
-                  ? 'bg-blue-600 text-white shadow-sm shadow-blue-900/40'
+                  ? 'bg-blue-700 text-white shadow-sm shadow-blue-900/40'
                   : isAI
-                    ? 'text-violet-400 hover:bg-violet-500/10 hover:text-violet-300'
-                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                    ? 'text-violet-400 hover:bg-blue-400/20 hover:text-white'
+                    : 'text-slate-400 hover:bg-blue-400/20 hover:text-white'
                 }`}
             >
               <span className={`shrink-0 transition-colors
-                ${active ? 'text-white' : isAI ? 'text-violet-400 group-hover:text-violet-300' : 'text-slate-500 group-hover:text-slate-300'}`}>
+                ${active
+                  ? 'text-white'
+                  : isAI
+                    ? 'text-violet-400 group-hover:text-white'
+                    : 'text-slate-500 group-hover:text-white'
+                }`}>
                 {item.icon}
               </span>
               <span className={`truncate leading-none ${isRtl ? 'text-right flex-1' : ''}`}>
@@ -157,7 +161,7 @@ export default function Sidebar() {
         })}
       </nav>
 
-      {/* ── Sign out — smaller ── */}
+      {/* ── Sign out ── */}
       <div className="shrink-0 px-2 py-2 border-t border-slate-800">
         <button onClick={handleSignOut}
           className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-[12px] font-medium

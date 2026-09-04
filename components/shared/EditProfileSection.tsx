@@ -38,9 +38,9 @@ const UI: Record<Lang, {
 }
 
 const ROLE_LABELS: Record<Lang, Record<string, string>> = {
-  fr: { super_admin: 'Super Admin', admin: 'Administrateur', teacher: 'Enseignant' },
-  en: { super_admin: 'Super Admin', admin: 'Administrator',  teacher: 'Teacher'    },
-  ar: { super_admin: 'مدير عام',    admin: 'مدير',           teacher: 'أستاذ'      },
+  fr: { super_admin: 'Directeur', admin: 'Administrateur', teacher: 'Enseignant' },
+  en: { super_admin: 'Director', admin: 'Administrator',  teacher: 'Teacher'    },
+  ar: { super_admin: 'مدير',    admin: 'حارس عام',           teacher: 'أستاذ'      },
 }
 
 export default function EditProfileSection({ lang = 'en' }: { lang?: Lang }) {
