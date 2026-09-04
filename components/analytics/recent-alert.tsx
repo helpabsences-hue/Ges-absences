@@ -24,30 +24,49 @@ export function RecentAlerts({ lang = 'fr' }: { lang?: Lang }) {
   const ui = UI[lang]
   const dateLocale = lang === 'ar' ? 'ar-MA' : lang === 'en' ? 'en-GB' : 'fr-FR'
 
-  useEffect(() => {
-    const fetchAlerts = async () => {
-      const supabase = createClient()
-      const { data } = await supabase
-        .from('attendance')
-        .select(`id, status,
-          students ( name, groups ( name ) ),
-          class_sessions!inner ( session_date, teacher_planning ( courses ( name ) ) )
-        `)
-        .in('status', ['absent', 'late'])
-        .order('class_sessions(session_date)', { ascending: false })
-        .limit(8)
+  const fetchAlerts = async () => {
+    const supabase = createClient()
+    const { data } = await supabase
+      .from('attendance')
+      .select(`id, status,
+        students ( name, groups ( name ) ),
+        class_sessions!inner ( session_date, teacher_planning ( courses ( name ) ) )
+      `)
+      .in('status', ['absent', 'late'])
+      .order('class_sessions(session_date)', { ascending: false })
+      .limit(8)
 
-      setAlerts((data ?? []).map((r: any) => ({
-        id:          r.id,
-        studentName: r.students?.name ?? '—',
-        groupName:   r.students?.groups?.name ?? '—',
-        courseName:  r.class_sessions?.teacher_planning?.courses?.name ?? '—',
-        date:        r.class_sessions?.session_date ?? '',
-        status:      r.status,
-      })))
-      setLoading(false)
-    }
+    setAlerts((data ?? []).map((r: any) => ({
+      id:          r.id,
+      studentName: r.students?.name ?? '—',
+      groupName:   r.students?.groups?.name ?? '—',
+      courseName:  r.class_sessions?.teacher_planning?.courses?.name ?? '—',
+      date:        r.class_sessions?.session_date ?? '',
+      status:      r.status,
+    })))
+    setLoading(false)
+  }
+
+  useEffect(() => {
     fetchAlerts()
+
+    const supabase = createClient()
+
+    // ── Realtime broadcast from teacher save ──────────────
+    const channel = supabase
+      .channel('recent-alerts-' + Date.now())
+      .on('broadcast', { event: 'attendance-saved' }, () => {
+        fetchAlerts()
+      })
+      .subscribe()
+
+    // ── Polling every 15 seconds as fallback ──────────────
+    const interval = setInterval(fetchAlerts, 15000)
+
+    return () => {
+      supabase.removeChannel(channel)
+      clearInterval(interval)
+    }
   }, [])
 
   if (loading) {
