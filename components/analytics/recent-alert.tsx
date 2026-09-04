@@ -54,7 +54,7 @@ export function RecentAlerts({ lang = 'fr' }: { lang?: Lang }) {
 
     // ── Realtime broadcast from teacher save ──────────────
     const channel = supabase
-      .channel('recent-alerts-' + Date.now())
+      .channel('attendance-saved')
       .on('broadcast', { event: 'attendance-saved' }, () => {
         fetchAlerts()
       })

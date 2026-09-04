@@ -113,14 +113,20 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
     const supabase = createClient()
     const date = TODAY_DATE()
 
-    // 1. Upsert session row
-    const { data: sessionData, error: sessionError } = await supabase
+    // 1. Upsert session row — if exists, fetch it
+    await supabase
       .from('class_sessions')
       .upsert(
         { planning_id: slot.id, session_date: date },
-        { onConflict: 'planning_id,session_date' }
+        { onConflict: 'planning_id,session_date', ignoreDuplicates: true }
       )
+
+    // Always fetch the session after upsert to get the correct id
+    const { data: sessionData, error: sessionError } = await supabase
+      .from('class_sessions')
       .select()
+      .eq('planning_id', slot.id)
+      .eq('session_date', date)
       .single()
 
     if (sessionError || !sessionData) {
