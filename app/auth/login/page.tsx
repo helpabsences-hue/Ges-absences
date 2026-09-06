@@ -169,7 +169,7 @@ export default function LoginPage() {
     await supabase.auth.signOut()
     setPwdSaved(true)
     setLoading(false)
-    setTimeout(() => router.push('/auth/login'), 2000)
+    setTimeout(() => { window.location.href = '/auth/login?reset=1' }, 2000)
   }
 
   // Show password creation form for parent invitation
@@ -191,7 +191,12 @@ export default function LoginPage() {
               </svg>
             </div>
             <p className="text-white font-semibold">Mot de passe créé avec succès !</p>
-            <p className="text-slate-400 text-sm animate-pulse">Redirection vers la connexion…</p>
+            <p className="text-slate-400 text-sm animate-pulse">Redirection dans 2 secondes…</p>
+            <button
+              onClick={() => { window.location.href = '/auth/login?reset=1' }}
+              className="w-full bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition">
+              Se connecter maintenant →
+            </button>
           </div>
         ) : (
           <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl">
