@@ -152,7 +152,6 @@ export default function InvitePage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2">
-            <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
               <LogoIcon className="w-8 h-8 shrink-0" />
               <span className="text-lg font-bold tracking-tight text-white">
                 Attend<span className="text-blue-400">efy</span>
@@ -172,6 +171,5 @@ export default function InvitePage() {
           </div>
         </div>
       </div>
-    </div>
       )
 }

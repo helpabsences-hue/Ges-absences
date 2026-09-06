@@ -162,27 +162,25 @@ export default function LoginPage() {
 
     // Mark parent invitation as accepted
     const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
+    if (user?.email) {
+      // Update directly by parent_email — works even if profile has no student_id
+      await supabase
+        .from('students')
+        .update({ parent_invite_status: 'accepted' })
+        .eq('parent_email', user.email)
+
+      // Also try via profile student_id as backup
       const { data: profile } = await supabase
         .from('profiles')
         .select('role, student_id')
         .eq('id', user.id)
-        .single()
+        .maybeSingle()
 
-      if (profile?.role === 'parent') {
-        if (profile?.student_id) {
-          // Direct update via student_id
-          await supabase
-            .from('students')
-            .update({ parent_invite_status: 'accepted' })
-            .eq('id', profile.student_id)
-        } else {
-          // Fallback — find student by parent_email
-          await supabase
-            .from('students')
-            .update({ parent_invite_status: 'accepted' })
-            .eq('parent_email', user.email)
-        }
+      if (profile?.role === 'parent' && profile?.student_id) {
+        await supabase
+          .from('students')
+          .update({ parent_invite_status: 'accepted' })
+          .eq('id', profile.student_id)
       }
     }
 
@@ -267,19 +265,17 @@ export default function LoginPage() {
     // If parent — mark invitation as accepted
     if (profile?.role === 'parent') {
       const supabase = createClient()
-      if (profile?.student_id) {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user?.email) {
         await supabase
           .from('students')
           .update({ parent_invite_status: 'accepted' })
-          .eq('id', profile.student_id)
-      } else {
-        // Fallback — find by parent_email
-        const { data: { user } } = await supabase.auth.getUser()
-        if (user?.email) {
+          .eq('parent_email', user.email)
+        if (profile?.student_id) {
           await supabase
             .from('students')
             .update({ parent_invite_status: 'accepted' })
-            .eq('parent_email', user.email)
+            .eq('id', profile.student_id)
         }
       }
     }
