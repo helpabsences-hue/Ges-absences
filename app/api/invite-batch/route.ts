@@ -30,36 +30,47 @@ export async function POST() {
         process.env.SUPABASE_SERVICE_ROLE_KEY!
       )
 
-      const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
+      // Try invite first (creates user), fallback to recovery (user exists)
+      let linkData: any = null
+      let inviteUrl = ''
+
+      const { data: inviteData, error: inviteError } = await admin.auth.admin.generateLink({
         type:    'invite',
         email:   item.parent_email,
         options: { redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/login` },
       })
 
-      if (linkError || !linkData) throw new Error(linkError?.message ?? 'Link error')
+      if (inviteError) {
+        // User already exists — use recovery link instead
+        const { data: recoveryData, error: recoveryError } = await admin.auth.admin.generateLink({
+          type:    'recovery',
+          email:   item.parent_email,
+          options: { redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/login` },
+        })
+        if (recoveryError || !recoveryData) throw new Error(recoveryError?.message ?? 'Link error')
+        linkData  = recoveryData
+        inviteUrl = recoveryData.properties?.action_link ?? ''
+      } else {
+        if (!inviteData) throw new Error('No link data')
+        linkData  = inviteData
+        inviteUrl = inviteData.properties?.action_link ?? ''
 
-      const inviteUrl = linkData.properties?.action_link ?? ''
-      const userId    = linkData.user?.id
-
-      // Create parent profile if user was just created
-      if (userId) {
-        const { data: existingProfile } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('id', userId)
-          .maybeSingle()
-
-        if (!existingProfile) {
-          await admin.from('profiles').insert({
-            id:         userId,
-            name:       item.parent_name || 'Parent',
-            email:      item.parent_email,
-            role:       'parent',
-            school_id:  item.school_id,
-            student_id: item.student_id,
-          })
+        // Create parent profile for new users
+        const userId = inviteData.user?.id
+        if (userId) {
+          const { data: existingProfile } = await supabase
+            .from('profiles').select('id').eq('id', userId).maybeSingle()
+          if (!existingProfile) {
+            await admin.from('profiles').insert({
+              id: userId, name: item.parent_name || 'Parent',
+              email: item.parent_email, role: 'parent',
+              school_id: item.school_id, student_id: item.student_id,
+            })
+          }
         }
       }
+
+      if (!inviteUrl) throw new Error('No invite URL')
 
       // Send via Brevo
       const res = await fetch('https://api.brevo.com/v3/smtp/email', {
