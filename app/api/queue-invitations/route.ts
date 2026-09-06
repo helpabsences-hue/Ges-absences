@@ -1,12 +1,18 @@
 // app/api/queue-invitations/route.ts
 // Adds students to invitation queue
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createAdmin } from '@supabase/supabase-js'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const admin = createAdmin(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
 
   const { student_ids } = await request.json()
   if (!student_ids?.length) return NextResponse.json({ error: 'No students' }, { status: 400 })
@@ -41,8 +47,8 @@ export async function POST(request: NextRequest) {
   const { error } = await supabase.from('invitation_queue').insert(rows)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Update student status to queued
-  await supabase.from('students')
+  // Update student status to queued using admin to bypass RLS
+  await admin.from('students')
     .update({ parent_invite_status: 'queued' })
     .in('id', student_ids)
 

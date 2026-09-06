@@ -163,7 +163,8 @@ export async function POST() {
         .update({ status: 'sent', sent_at: new Date().toISOString() })
         .eq('id', item.id)
 
-      await supabase.from('students')
+      // Use admin to bypass RLS when updating student status
+      await admin.from('students')
         .update({ parent_invite_status: 'invited' })
         .eq('id', item.student_id)
 
