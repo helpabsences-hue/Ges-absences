@@ -425,6 +425,10 @@ export default function InvitationsPage() {
                               {inv.status === 'pending' && (
                                 <button onClick={() => resendInvitation(inv.id)} disabled={sending}
                                   className="flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 px-2.5 py-1.5 rounded-lg transition disabled:opacity-40">
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                  </svg>
                                   {ui.resend}
                                 </button>
                               )}
@@ -573,7 +577,7 @@ export default function InvitationsPage() {
                         onChange={toggleSelectAll}
                         className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-blue-600 cursor-pointer"/>
                     </th>
-                    {[ui.parentColStudent, ui.parentColGroup, ui.parentColEmail, ui.parentColStatus].map((h, i) => (
+                    {[ui.parentColStudent, ui.parentColGroup, ui.parentColEmail, ui.parentColStatus, ''].map((h, i) => (
                       <th key={i} className={`px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider ${isRtl ? 'text-right' : 'text-left'}`}>{h}</th>
                     ))}
                   </tr>
@@ -611,6 +615,27 @@ export default function InvitationsPage() {
                           }
                         </td>
                         <td className="px-4 py-3">{parentStatusBadge(s.parent_invite_status)}</td>
+                        <td className="px-4 py-3">
+                          {(s.parent_invite_status === 'invited' || s.parent_invite_status === 'queued') && (
+                            <button
+                              onClick={async () => {
+                                await fetch('/api/resend-parent-invite', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ student_id: s.id }),
+                                })
+                                toast.success(`Email renvoyé à ${s.parent_email}`)
+                                fetchStudents()
+                              }}
+                              className="text-xs font-medium text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 px-2.5 py-1.5 rounded-lg transition flex items-center gap-1.5">
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                              </svg>
+                              Renvoyer
+                            </button>
+                          )}
+                        </td>
                       </tr>
                     )
                   })}

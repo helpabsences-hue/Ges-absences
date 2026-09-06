@@ -159,6 +159,23 @@ export default function LoginPage() {
     const supabase = createClient()
     const { error: updateError } = await supabase.auth.updateUser({ password: newPwd })
     if (updateError) { setError(updateError.message); setLoading(false); return }
+
+    // Mark parent invitation as accepted
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role, student_id')
+        .eq('id', user.id)
+        .single()
+      if (profile?.role === 'parent' && profile?.student_id) {
+        await supabase
+          .from('students')
+          .update({ parent_invite_status: 'accepted' })
+          .eq('id', profile.student_id)
+      }
+    }
+
     await supabase.auth.signOut()
     setPwdSaved(true)
     setLoading(false)
@@ -236,6 +253,16 @@ export default function LoginPage() {
     await fetchProfile()
     const profile = useAuthStore.getState().profile
     if (profile?.id) initUserSettings(profile.id)
+
+    // If parent — mark invitation as accepted
+    if (profile?.role === 'parent' && profile?.student_id) {
+      const supabase = createClient()
+      await supabase
+        .from('students')
+        .update({ parent_invite_status: 'accepted' })
+        .eq('id', profile.student_id)
+    }
+
     if (profile?.role === 'teacher')             router.push('/teacher')
     else if (profile?.role === 'parent')         router.push('/parent')
     else if (profile?.role === 'platform_admin') router.push('/super-admin')

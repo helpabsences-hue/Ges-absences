@@ -21,6 +21,7 @@ export interface Profile {
   email: string
   role: Role
   school_id: string
+  student_id?: string | null
   created_at: string
 }
 
