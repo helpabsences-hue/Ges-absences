@@ -64,7 +64,8 @@ async function fetchData(supabase: any, school_id: string) {
     .from('attendance')
     .select(`
       status,
-      students ( name, school_id, massar_code ),
+      reason,
+      students ( name, school_id, massar_code, parent_name, parent_email, parent_phone ),
       class_sessions (
         session_date,
         teacher_planning (
@@ -72,11 +73,12 @@ async function fetchData(supabase: any, school_id: string) {
           start_time,
           end_time,
           courses ( name ),
-          groups  ( name, year )
+          groups  ( name, year ),
+          profiles ( name )
         )
       )
     `)
-    .limit(1000)
+  // No limit — fetch all records, buildStats() compresses them
 
   const filtered = (data ?? []).filter((r: any) =>
     r.students?.school_id === school_id ||
@@ -84,6 +86,34 @@ async function fetchData(supabase: any, school_id: string) {
   )
 
   return filtered as any[]
+}
+
+// ── FETCH RECENT — last 7 days ────────────────────────────────────────
+async function fetchRecent(supabase: any, school_id: string) {
+  const sevenDaysAgo = new Date()
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+  const from = sevenDaysAgo.toISOString().split('T')[0]
+
+  const { data } = await supabase
+    .from('attendance')
+    .select(`
+      status, reason,
+      students ( name ),
+      class_sessions (
+        session_date,
+        teacher_planning (
+          school_id,
+          courses ( name ),
+          groups  ( name ),
+          profiles ( name )
+        )
+      )
+    `)
+    .gte('class_sessions.session_date', from)
+
+  return (data ?? []).filter((r: any) =>
+    r.class_sessions?.teacher_planning?.school_id === school_id
+  ) as any[]
 }
 
 // ── FETCH ALERTS — how many alerts sent and to whom ──────────────────
@@ -105,24 +135,34 @@ function buildStats(rows: any[], alerts: any[] = []) {
   // Per student
   const byStudent: Record<string, any> = {}
   for (const r of rows) {
-    const name = r.students?.name ?? 'Inconnu'
+    const name   = r.students?.name ?? 'Inconnu'
     if (!byStudent[name]) byStudent[name] = {
       name, absent: 0, late: 0, total: 0,
-      days: [], subjects: {}, subjectDays: []
+      days: [], subjects: {}, subjectDays: [],
+      dates: [], byMonth: {},
+      parentName:  r.students?.parent_name  ?? '—',
+      parentEmail: r.students?.parent_email ?? '—',
+      parentPhone: r.students?.parent_phone ?? '—',
+      reasons: [],
     }
     byStudent[name].total++
 
     const date    = r.class_sessions?.session_date
     const course  = r.class_sessions?.teacher_planning?.courses?.name ?? '—'
+    const teacher = r.class_sessions?.teacher_planning?.profiles?.name ?? '—'
     const dayName = date ? new Date(date + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long' }) : ''
+    const month   = date ? date.slice(0, 7) : ''
 
     if (r.status === 'absent') {
       byStudent[name].absent++
       if (dayName) byStudent[name].days.push(dayName)
-      // Track per subject
+      if (date)    byStudent[name].dates.push(`${date} ${course} (prof:${teacher})`)
+      if (r.reason) byStudent[name].reasons.push(r.reason)
+      if (month) {
+        byStudent[name].byMonth[month] = (byStudent[name].byMonth[month] || 0) + 1
+      }
       if (!byStudent[name].subjects[course]) byStudent[name].subjects[course] = 0
       byStudent[name].subjects[course]++
-      // Track subject + day combo
       if (dayName && course !== '—') {
         byStudent[name].subjectDays.push(`${course} (${dayName})`)
       }
@@ -241,8 +281,23 @@ function buildSystemPrompt(stats: any, adminName: string, langStr: string) {
       const subjectSummary = Object.entries(s.subjects ?? {})
         .map(([subj, count]: any) => `${subj}(${count}x)`)
         .join(', ')
+      const monthSummary = Object.entries(s.byMonth ?? {})
+        .sort((a: any, b: any) => b[1] - a[1])
+        .map(([month, count]: any) => `${month}:${count}abs`)
+        .join(', ')
+      const dateSummary = (s.dates ?? []).slice(0, 10).join(', ')
       const rate = s.total > 0 ? Math.round(s.absent / s.total * 100) : 0
-      return `${s.name}: ${s.absent} abs/${s.total} séances (${rate}%)${subjectSummary ? ' — matières: ' + subjectSummary : ''}`
+      return `${s.name}: ${s.absent} abs/${s.total} séances (${rate}%)${subjectSummary ? ' — matières: ' + subjectSummary : ''}${monthSummary ? ' — par mois: ' + monthSummary : ''}${dateSummary ? ' — dates: ' + dateSummary : ''}`
+    }).join(' | '),
+    '',
+    '=== TOUS LES ÉTUDIANTS (pour répondre aux questions spécifiques) ===',
+    Object.values(byStudent).map((s: any) => {
+      const subjects = Object.entries(s.subjects ?? {}).map(([subj, count]: any) => `${subj}:${count}x`).join(',')
+      const months   = Object.entries(s.byMonth ?? {}).map(([m, c]: any) => `${m}:${c}`).join(',')
+      const dates    = (s.dates ?? []).join(' | ')
+      const reasons  = (s.reasons ?? []).length > 0 ? ` raisons:[${s.reasons.join(',')}]` : ''
+      const parent   = `parent:${s.parentName}(${s.parentEmail}${s.parentPhone !== '—' ? '/' + s.parentPhone : ''})`
+      return `${s.name}: ${s.absent}abs/${s.total}séances retards:${s.late} ${parent}${subjects ? ' matières[' + subjects + ']' : ''}${months ? ' mois[' + months + ']' : ''}${dates ? ' dates[' + dates + ']' : ''}${reasons}`
     }).join(' | '),
     '',
     '=== ÉTUDIANTS À RISQUE (>25%) ===',
@@ -331,11 +386,25 @@ async function generateReport(supabase: any, school_id: string, payload: any) {
 async function handleChat(supabase: any, school_id: string, payload: any, adminName: string) {
   const { messages, lang = 'fr' } = payload
   const rows    = await fetchData(supabase, school_id)
+  const recent  = await fetchRecent(supabase, school_id)
   const alerts  = await fetchAlerts(supabase, school_id)
   const stats   = buildStats(rows, alerts)
   const langStr = lang === 'ar' ? 'arabe' : lang === 'en' ? 'anglais' : 'français'
 
-  const system = buildSystemPrompt(stats, adminName, langStr)
+  // Build recent 7 days summary
+  const recentAbsents = recent.filter((r: any) => r.status === 'absent')
+  const recentSummary = recentAbsents.slice(0, 50).map((r: any) => {
+    const student = r.students?.name ?? '—'
+    const course  = r.class_sessions?.teacher_planning?.courses?.name ?? '—'
+    const teacher = r.class_sessions?.teacher_planning?.profiles?.name ?? '—'
+    const date    = r.class_sessions?.session_date ?? '—'
+    const reason  = r.reason ? ` raison:${r.reason}` : ''
+    return `${date} ${student} absent en ${course} (prof:${teacher})${reason}`
+  }).join(' | ')
+
+  const system = buildSystemPrompt(stats, adminName, langStr) +
+    `\n\n=== ABSENCES DES 7 DERNIERS JOURS (${recentAbsents.length} absences) ===\n` +
+    (recentSummary || 'Aucune absence récente')
 
   const history = messages.slice(0, -1)
     .map((m: any) => (m.role === 'user' ? 'User: ' : 'Assistant: ') + m.content)
