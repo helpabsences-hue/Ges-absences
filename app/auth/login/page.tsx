@@ -160,28 +160,10 @@ export default function LoginPage() {
     const { error: updateError } = await supabase.auth.updateUser({ password: newPwd })
     if (updateError) { setError(updateError.message); setLoading(false); return }
 
-    // Mark parent invitation as accepted
+    // Mark parent invitation as accepted via server API (bypasses RLS)
     const { data: { user } } = await supabase.auth.getUser()
-    if (user?.email) {
-      // Update directly by parent_email — works even if profile has no student_id
-      await supabase
-        .from('students')
-        .update({ parent_invite_status: 'accepted' })
-        .eq('parent_email', user.email)
-
-      // Also try via profile student_id as backup
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role, student_id')
-        .eq('id', user.id)
-        .maybeSingle()
-
-      if (profile?.role === 'parent' && profile?.student_id) {
-        await supabase
-          .from('students')
-          .update({ parent_invite_status: 'accepted' })
-          .eq('id', profile.student_id)
-      }
+    if (user) {
+      await fetch('/api/accept-invite', { method: 'POST' }).catch(console.error)
     }
 
     await supabase.auth.signOut()
@@ -262,22 +244,9 @@ export default function LoginPage() {
     const profile = useAuthStore.getState().profile
     if (profile?.id) initUserSettings(profile.id)
 
-    // If parent — mark invitation as accepted
+    // If parent — mark invitation as accepted via server API
     if (profile?.role === 'parent') {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user?.email) {
-        await supabase
-          .from('students')
-          .update({ parent_invite_status: 'accepted' })
-          .eq('parent_email', user.email)
-        if (profile?.student_id) {
-          await supabase
-            .from('students')
-            .update({ parent_invite_status: 'accepted' })
-            .eq('id', profile.student_id)
-        }
-      }
+      await fetch('/api/accept-invite', { method: 'POST' }).catch(console.error)
     }
 
     if (profile?.role === 'teacher')             router.push('/teacher')

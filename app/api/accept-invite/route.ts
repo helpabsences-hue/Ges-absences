@@ -1,81 +1,44 @@
-// src/app/api/accept-invite/route.ts
-import { createServiceClient } from '@/lib/supabase/server'
+// app/api/accept-invite/route.ts
+// Called after parent creates password — updates invite status to accepted
+import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
-import type { AcceptInvitePayload } from '@/types'
+import { createClient as createAdmin } from '@supabase/supabase-js'
 
-export async function POST(request: Request) {
-  const body: AcceptInvitePayload = await request.json()
-  const { token, name, password } = body
+export async function POST() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  if (!token || !name || !password) {
-    return NextResponse.json(
-      { error: 'All fields are required.' },
-      { status: 400 }
-    )
-  }
-  if (password.length < 8) {
-    return NextResponse.json(
-      { error: 'Password must be at least 8 characters.' },
-      { status: 400 }
-    )
-  }
+  // Use service role to bypass RLS
+  const admin = createAdmin(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
 
-  // Service role needed to create user + write profile
-  const supabase = createServiceClient()
+  // Update by parent_email
+  const { error } = await admin
+    .from('students')
+    .update({ parent_invite_status: 'accepted' })
+    .eq('parent_email', user.email)
 
-  // ── 1. Find valid pending invitation ──────────────────
-  const { data: invitation, error: tokenError } = await supabase
-    .from('invitations')
-    .select('*')
-    .eq('token', token)
-    .eq('status', 'pending')
-    .single()
-
-  if (tokenError || !invitation) {
-    return NextResponse.json(
-      { error: 'Invalid or expired invitation link.' },
-      { status: 400 }
-    )
+  if (error) {
+    console.error('Accept invite error:', error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  // ── 2. Create auth user ────────────────────────────────
-  const { data: authData, error: authError } =
-    await supabase.auth.admin.createUser({
-      email: invitation.email,
-      password,
-      email_confirm: true,
-      user_metadata: { name },
-    })
+  // Also update by student_id if profile has it
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('student_id')
+    .eq('id', user.id)
+    .maybeSingle()
 
-  if (authError || !authData.user) {
-    return NextResponse.json(
-      { error: authError?.message ?? 'Failed to create account.' },
-      { status: 400 }
-    )
+  if (profile?.student_id) {
+    await admin
+      .from('students')
+      .update({ parent_invite_status: 'accepted' })
+      .eq('id', profile.student_id)
   }
 
-  // ── 3. Create profile ─────────────────────────────────
-  const { error: profileError } = await supabase.from('profiles').insert({
-    id: authData.user.id,
-    name,
-    email: invitation.email,
-    role: invitation.role,
-    school_id: invitation.school_id,
-  })
-
-  if (profileError) {
-    await supabase.auth.admin.deleteUser(authData.user.id)
-    return NextResponse.json(
-      { error: 'Failed to create profile.' },
-      { status: 500 }
-    )
-  }
-
-  // ── 4. Mark invitation as accepted ────────────────────
-  await supabase
-    .from('invitations')
-    .update({ status: 'accepted' })
-    .eq('id', invitation.id)
-
-  return NextResponse.json({ success: true, role: invitation.role })
+  return NextResponse.json({ success: true })
 }
