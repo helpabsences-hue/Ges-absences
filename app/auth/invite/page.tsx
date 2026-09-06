@@ -6,6 +6,8 @@ export const dynamic = 'force-dynamic'
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { LogoIcon } from '@/components/shared/LogoIcon'
+
 
 // ── Inner component (needs useSearchParams inside Suspense) ─
 function InviteForm() {
@@ -151,28 +153,25 @@ export default function InvitePage() {
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2">
             <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-              </svg>
+              <LogoIcon className="w-8 h-8 shrink-0" />
+              <span className="text-lg font-bold tracking-tight text-white">
+                Attend<span className="text-blue-400">efy</span>
+              </span>
             </div>
-            <span className="text-2xl font-bold text-white tracking-tight">
-              Attend<span className="text-blue-400">ify</span>
-            </span>
           </div>
-        </div>
 
-        {/* Card */}
-        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl">
-          <Suspense
-            fallback={
-              <div className="text-center py-8 text-slate-400">Loading invitation…</div>
-            }
-          >
-            <InviteForm />
-          </Suspense>
+          {/* Card */}
+          <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl">
+            <Suspense
+              fallback={
+                <div className="text-center py-8 text-slate-400">Loading invitation…</div>
+              }
+            >
+              <InviteForm />
+            </Suspense>
+          </div>
         </div>
       </div>
     </div>
-  )
+      )
 }

@@ -168,11 +168,21 @@ export default function LoginPage() {
         .select('role, student_id')
         .eq('id', user.id)
         .single()
-      if (profile?.role === 'parent' && profile?.student_id) {
-        await supabase
-          .from('students')
-          .update({ parent_invite_status: 'accepted' })
-          .eq('id', profile.student_id)
+
+      if (profile?.role === 'parent') {
+        if (profile?.student_id) {
+          // Direct update via student_id
+          await supabase
+            .from('students')
+            .update({ parent_invite_status: 'accepted' })
+            .eq('id', profile.student_id)
+        } else {
+          // Fallback — find student by parent_email
+          await supabase
+            .from('students')
+            .update({ parent_invite_status: 'accepted' })
+            .eq('parent_email', user.email)
+        }
       }
     }
 
@@ -255,12 +265,23 @@ export default function LoginPage() {
     if (profile?.id) initUserSettings(profile.id)
 
     // If parent — mark invitation as accepted
-    if (profile?.role === 'parent' && profile?.student_id) {
+    if (profile?.role === 'parent') {
       const supabase = createClient()
-      await supabase
-        .from('students')
-        .update({ parent_invite_status: 'accepted' })
-        .eq('id', profile.student_id)
+      if (profile?.student_id) {
+        await supabase
+          .from('students')
+          .update({ parent_invite_status: 'accepted' })
+          .eq('id', profile.student_id)
+      } else {
+        // Fallback — find by parent_email
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user?.email) {
+          await supabase
+            .from('students')
+            .update({ parent_invite_status: 'accepted' })
+            .eq('parent_email', user.email)
+        }
+      }
     }
 
     if (profile?.role === 'teacher')             router.push('/teacher')
