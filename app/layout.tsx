@@ -1,3 +1,31 @@
+// // // app/layout.tsx
+// // import type { Metadata } from 'next'
+// // import { Inter } from 'next/font/google'
+// // import './globals.css'
+// // import ThemeProvider from '@/components/shared/ThemeProvider'
+// // import { Toaster } from 'sonner'
+
+// // const inter = Inter({ subsets: ['latin'] })
+
+// // export const metadata: Metadata = {
+// //   title:       'Attendefy',
+// //   description: 'Multi-tenant school attendance management',
+// // }
+
+// // export default function RootLayout({ children }: { children: React.ReactNode }) {
+// //   return (
+// //     <html lang="fr" suppressHydrationWarning>
+// //       <body className={`${inter.className} antialiased`} suppressHydrationWarning>
+// //         <ThemeProvider>
+// //           {children}
+// //           <Toaster position="top-right" richColors />
+// //         </ThemeProvider>
+// //       </body>
+// //     </html>
+// //   )
+// // }
+
+
 // // app/layout.tsx
 // import type { Metadata } from 'next'
 // import { Inter } from 'next/font/google'
@@ -9,8 +37,15 @@
 
 // export const metadata: Metadata = {
 //   title:       'Attendefy',
-//   description: 'Multi-tenant school attendance management',
+//   description: 'Gestion des absences scolaires',
+//   manifest:    '/manifest.json',
+//   appleWebApp: {
+//     capable:         true,
+//     statusBarStyle:  'black-translucent',
+//     title:           'Attendefy',
+//   },
 // }
+
 
 // export default function RootLayout({ children }: { children: React.ReactNode }) {
 //   return (
@@ -25,10 +60,10 @@
 //   )
 // }
 
-
 // app/layout.tsx
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
+import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 import ThemeProvider from '@/components/shared/ThemeProvider'
 import { Toaster } from 'sonner'
@@ -55,6 +90,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {children}
           <Toaster position="top-right" richColors />
         </ThemeProvider>
+        <Analytics />
       </body>
     </html>
   )
