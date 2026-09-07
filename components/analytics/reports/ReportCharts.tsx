@@ -49,7 +49,7 @@ export function ReportCharts({ loading, groupStats, reasonData, barTitle, pieTit
       </div>
 
       {/* Pie chart */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-visible">
         <div className="px-4 sm:px-6 py-4 border-b border-slate-800">
           <h3 className="text-sm font-semibold text-white">{pieTitle}</h3>
         </div>
@@ -57,9 +57,9 @@ export function ReportCharts({ loading, groupStats, reasonData, barTitle, pieTit
           {loading ? <SkeletonBlock /> : reasonData.length === 0 ? (
             <p className="text-center text-slate-500 py-16 text-sm">{noAbsence}</p>
           ) : (
-            <ResponsiveContainer width="100%" height={240}>
-              <PieChart>
-                <Pie data={reasonData} cx="50%" cy="50%" outerRadius={85} innerRadius={40} dataKey="value"
+            <ResponsiveContainer width="100%" height={280}>
+              <PieChart margin={{ top: 20, right: 20, left: 20, bottom: 10 }}>
+                <Pie data={reasonData} cx="50%" cy="55%" outerRadius={85} innerRadius={40} dataKey="value"
                   label={({ percent }) => (percent ?? 0) > 0.05 ? `${((percent ?? 0)*100).toFixed(0)}%` : ''} labelLine={false}>
                   {reasonData.map((e, i) => <Cell key={i} fill={e.fill} />)}
                 </Pie>

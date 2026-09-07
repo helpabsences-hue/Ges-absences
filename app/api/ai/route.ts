@@ -193,7 +193,7 @@ function buildStats(rows: any[], alerts: any[] = []) {
   for (const r of rows) {
     const date = r.class_sessions?.session_date
     if (!date) continue
-    const day = new Date(date).toLocaleDateString('en', { weekday: 'long' })
+    const day = new Date(date + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long' })
     if (!byDay[day]) byDay[day] = { total: 0, absent: 0 }
     byDay[day].total++
     if (r.status === 'absent') byDay[day].absent++
@@ -271,7 +271,7 @@ function buildSystemPrompt(stats: any, adminName: string, langStr: string) {
 
   return [
     'Tu es un assistant IA dans Attendefy (gestion absences scolaires).',
-    'Tu aides ' + adminName + '. Réponds en ' + langStr + '. Sois concis et professionnel. Utilise **gras** pour les noms importants et • pour les listes.',
+    'Tu aides ' + adminName + '. Réponds en ' + langStr + '. Sois concis et professionnel. Utilise **gras** pour les noms importants et • pour les listes. IMPORTANT: Utilise exactement les noms de jours fournis dans les données — ne les traduis pas ou ne les change pas.',
     '',
     '=== STATISTIQUES GÉNÉRALES ===',
     'Total relevés: ' + total + ' | Absences: ' + absents + ' (' + pct(absents) + '%) | Retards: ' + lates + ' | Présents: ' + stats.presents,
@@ -398,8 +398,9 @@ async function handleChat(supabase: any, school_id: string, payload: any, adminN
     const course  = r.class_sessions?.teacher_planning?.courses?.name ?? '—'
     const teacher = r.class_sessions?.teacher_planning?.profiles?.name ?? '—'
     const date    = r.class_sessions?.session_date ?? '—'
+    const dayName = date !== '—' ? new Date(date + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) : date
     const reason  = r.reason ? ` raison:${r.reason}` : ''
-    return `${date} ${student} absent en ${course} (prof:${teacher})${reason}`
+    return `${dayName} (${date}) — ${student} absent en ${course} (prof:${teacher})${reason}`
   }).join(' | ')
 
   const system = buildSystemPrompt(stats, adminName, langStr) +
