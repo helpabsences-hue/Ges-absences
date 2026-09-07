@@ -173,7 +173,7 @@ export default function AIPage() {
                     {msg.role === 'assistant' ? 'AI' : '👤'}
                   </div>
                   {/* Bubble */}
-                  <div className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap
+                  <div className={`max-w-[90%] px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap
                     ${msg.role === 'assistant'
                       ? 'bg-muted text-foreground rounded-tl-sm border border-border'
                       : 'bg-blue-600 text-white rounded-tr-sm'
@@ -237,8 +237,9 @@ export default function AIPage() {
 
       {/* Footer */}
       <p className="text-center text-xs text-muted-foreground shrink-0">
-        Powered by Groq · {lang === 'ar' ? 'النتائج قد تحتوي على أخطاء' : lang === 'en' ? 'Results may contain errors' : 'Les résultats peuvent contenir des erreurs'}
+        Powered by Groq AI.
       </p>
     </div>
   )
 }
+

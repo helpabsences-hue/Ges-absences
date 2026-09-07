@@ -31,8 +31,10 @@ export default function ParentDashboard() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
     const router = useRouter()
-    const studentIdRef = useRef<string | null>(null)
-    const supabaseRef  = useRef(createClient())
+    const studentIdRef  = useRef<string | null>(null)
+    const supabaseRef   = useRef(createClient())
+    const parentNameRef = useRef<string>('')
+    const [showProfile, setShowProfile] = useState(false)
 
     const loadAttendance = useCallback(async (student_id: string) => {
         const supabase = supabaseRef.current
@@ -91,6 +93,9 @@ export default function ParentDashboard() {
                 router.push('/dashboard')
                 return
             }
+
+            // Store parent name separately
+            parentNameRef.current = profile.name
 
             if (!profile.student_id) {
                 setError('Aucun étudiant associé à ce compte parent.')
@@ -186,15 +191,30 @@ export default function ParentDashboard() {
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
+                        {/* Desktop: show name + role */}
                         <div className="text-right hidden sm:block">
-                            <p className="text-sm font-medium text-white leading-tight">{stats?.name}</p>
+                            <p className="text-sm font-medium text-white leading-tight">{parentNameRef.current || stats?.name}</p>
                             <span className="text-xs text-blue-400 font-medium">Parent</span>
                         </div>
-                        <div className="w-8 h-8 rounded-full bg-blue-500/20 border border-blue-500/30 flex items-center justify-center shrink-0">
+
+                        {/* Avatar — clickable on mobile to show name/role */}
+                        <div className="relative">
+                          <button
+                            onClick={() => setShowProfile(v => !v)}
+                            className="w-8 h-8 rounded-full bg-blue-500/20 border border-blue-500/30 flex items-center justify-center shrink-0 focus:outline-none">
                             <span className="text-sm font-bold text-blue-400">
-                                {stats?.name?.charAt(0).toUpperCase()}
+                              {(parentNameRef.current || stats?.name || '?').charAt(0).toUpperCase()}
                             </span>
+                          </button>
+                          {/* Mobile dropdown */}
+                          {showProfile && (
+                            <div className="absolute right-0 top-10 bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 shadow-xl z-50 min-w-[160px] sm:hidden">
+                              <p className="text-sm font-semibold text-white">{parentNameRef.current || stats?.name}</p>
+                              <p className="text-xs text-blue-400 font-medium mt-0.5">Parent</p>
+                            </div>
+                          )}
                         </div>
+
                         <button onClick={handleLogout}
                             className="ml-1 p-2 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all"
                             title="Déconnecter">

@@ -1,7 +1,7 @@
 'use client'
 // app/teacher/_shell.tsx
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuthStore }     from '@/stores/useAuthStore'
@@ -19,6 +19,7 @@ export default function TeacherShell({ children }: { children: React.ReactNode }
   const { profile, fetchProfile, signOut } = useAuthStore()
   const { language } = useSettingsStore()
   const roleLabel = ROLE_LABEL[language || 'fr'] ?? 'Enseignant'
+  const [showProfile, setShowProfile] = useState(false)
 
   useEffect(() => { fetchProfile() }, [fetchProfile])
 
@@ -71,10 +72,20 @@ export default function TeacherShell({ children }: { children: React.ReactNode }
                   {roleLabel}
                 </span>
               </div>
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-green-500/20 border border-green-500/30 flex items-center justify-center shrink-0">
-                <span className="text-xs sm:text-sm font-bold text-green-400">
-                  {profile.name.charAt(0).toUpperCase()}
-                </span>
+              <div className="relative">
+                <button
+                  onClick={() => setShowProfile(v => !v)}
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-green-500/20 border border-green-500/30 flex items-center justify-center shrink-0 focus:outline-none">
+                  <span className="text-xs sm:text-sm font-bold text-green-400">
+                    {profile.name.charAt(0).toUpperCase()}
+                  </span>
+                </button>
+                {showProfile && (
+                  <div className="absolute right-0 top-10 bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 shadow-xl z-50 min-w-[160px] sm:hidden">
+                    <p className="text-sm font-semibold text-white">{profile.name}</p>
+                    <span className="text-xs font-semibold text-green-400">{roleLabel}</span>
+                  </div>
+                )}
               </div>
             </div>
 

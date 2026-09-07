@@ -4,46 +4,48 @@
 import { usePathname } from 'next/navigation'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useSettingsStore } from '@/stores/useSettingsStore'
+import { useState } from 'react'
 
 type Lang = 'fr' | 'en' | 'ar'
 
 // ── Inline translations — no t() dependency ───────────────
 const PAGE_TITLES: Record<string, Record<Lang, string>> = {
-  dashboard:   { fr: 'Tableau de Bord',    en: 'Dashboard',    ar: 'لوحة التحكم'       },
-  teachers:    { fr: 'Enseignants',         en: 'Teachers',     ar: 'الأساتذة'           },
-  students:    { fr: 'Étudiants',           en: 'Students',     ar: 'الطلاب'             },
-  groups:      { fr: 'Groupes',             en: 'Groups',       ar: 'الفصول'             },
-  fields:      { fr: 'Filières',            en: 'Fields',       ar: 'الشُّعَب'           },
-  courses:     { fr: 'Matières',            en: 'Courses',      ar: 'المواد'             },
-  planning:    { fr: 'Planning',            en: 'Planning',     ar: 'الجدول الزمني'       },
-  reports:     { fr: 'Rapports',            en: 'Reports',      ar: 'التقارير'           },
-  invitations: { fr: 'Invitations',         en: 'Invitations',  ar: 'الدعوات'            },
-  settings:    { fr: 'Paramètres',          en: 'Settings',     ar: 'الإعدادات'          },
-  teacher:     { fr: 'Mon Emploi du Temps', en: 'My Schedule',  ar: 'جدولي الدراسي'     },
+  dashboard: { fr: 'Tableau de Bord', en: 'Dashboard', ar: 'لوحة التحكم' },
+  teachers: { fr: 'Enseignants', en: 'Teachers', ar: 'الأساتذة' },
+  students: { fr: 'Étudiants', en: 'Students', ar: 'الطلاب' },
+  groups: { fr: 'Groupes', en: 'Groups', ar: 'الفصول' },
+  fields: { fr: 'Filières', en: 'Fields', ar: 'الشُّعَب' },
+  courses: { fr: 'Matières', en: 'Courses', ar: 'المواد' },
+  planning: { fr: 'Planning', en: 'Planning', ar: 'الجدول الزمني' },
+  reports: { fr: 'Rapports', en: 'Reports', ar: 'التقارير' },
+  invitations: { fr: 'Invitations', en: 'Invitations', ar: 'الدعوات' },
+  settings: { fr: 'Paramètres', en: 'Settings', ar: 'الإعدادات' },
+  teacher: { fr: 'Mon Emploi du Temps', en: 'My Schedule', ar: 'جدولي الدراسي' },
 }
 
 const ROLE_LABELS: Record<string, Record<Lang, string>> = {
-  super_admin: { fr: 'Directeur',    en: 'Director', ar: 'مدير'  },
-  admin:       { fr: 'Administrateur', en: 'Administrator', ar: 'حارس عام'},
-  teacher:     { fr: 'Enseignant',     en: 'Teacher',     ar: 'أستاذ'     },
+  super_admin: { fr: 'Directeur', en: 'Director', ar: 'مدير' },
+  admin: { fr: 'Administrateur', en: 'Administrator', ar: 'حارس عام' },
+  teacher: { fr: 'Enseignant', en: 'Teacher', ar: 'أستاذ' },
 }
 
 const ROLE_BADGE: Record<string, string> = {
   super_admin: 'bg-purple-500/15 text-purple-400 border border-purple-500/20',
-  admin:       'bg-blue-500/15 text-blue-400 border border-blue-500/20',
-  teacher:     'bg-green-500/15 text-green-400 border border-green-500/20',
+  admin: 'bg-blue-500/15 text-blue-400 border border-blue-500/20',
+  teacher: 'bg-green-500/15 text-green-400 border border-green-500/20',
 }
 
 export default function Header() {
-  const pathname     = usePathname()
-  const { profile }  = useAuthStore()
+  const pathname = usePathname()
+  const { profile } = useAuthStore()
   const { language } = useSettingsStore()
+  const [showProfile, setShowProfile] = useState(false)
 
-  const lang  = (language || 'fr') as Lang
+  const lang = (language || 'fr') as Lang
   const isRtl = lang === 'ar'
 
-  const segments  = pathname.split('/').filter(Boolean)
-  const lastSeg   = segments[segments.length - 1] ?? 'dashboard'
+  const segments = pathname.split('/').filter(Boolean)
+  const lastSeg = segments[segments.length - 1] ?? 'dashboard'
   const pageTitle = PAGE_TITLES[lastSeg]?.[lang] ?? lastSeg
 
   const today = new Date().toLocaleDateString(
@@ -69,7 +71,7 @@ export default function Header() {
         <div className={`hidden sm:flex items-center gap-1 mt-0.5 ${isRtl ? 'flex-row-reverse' : ''}`}>
           {segments.map((seg, i) => {
             const isLast = i === segments.length - 1
-            const label  = PAGE_TITLES[seg]?.[lang] ?? seg
+            const label = PAGE_TITLES[seg]?.[lang] ?? seg
             return (
               <span key={seg} className={`flex items-center gap-1 ${isRtl ? 'flex-row-reverse' : ''}`}>
                 <span className={`text-xs ${isLast ? 'text-slate-400' : 'text-slate-600'}`}>{label}</span>
@@ -90,27 +92,32 @@ export default function Header() {
         {today}
       </span>
 
-      {/* Profile */}
       {profile && (
-        <div className={`flex items-center gap-2 sm:gap-2.5 shrink-0 ${isRtl ? 'flex-row-reverse' : ''}`}>
-
-          {/* Name + role badge — visible sm+ */}
-          <div className={`hidden sm:flex flex-col ${isRtl ? 'items-start' : 'items-end'}`}>
-            <p className="text-xs sm:text-sm font-medium text-white leading-tight truncate max-w-[140px]">
+        <div className="flex items-center gap-2.5">
+          <div className="text-right hidden sm:block">
+            <p className="text-sm font-medium text-white leading-tight">
               {profile.name}
             </p>
-            <span className={`inline-flex items-center text-[10px] sm:text-xs font-semibold
-              px-1.5 py-0.5 rounded-md mt-0.5 ${roleBadge}`}>
-              {roleLabel}
-            </span>
+            <p className="text-xs text-blue-400 font-medium mt-1">
+              {profile.role === 'super_admin' ? 'Directeur' : 'Administrateur'}
+            </p>
           </div>
-
-          {/* Avatar */}
-          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-blue-500/20 border border-blue-500/30
-            flex items-center justify-center shrink-0">
-            <span className="text-xs sm:text-sm font-bold text-blue-400">
-              {profile.name.charAt(0).toUpperCase()}
-            </span>
+          <div className="relative">
+            <button
+              onClick={() => setShowProfile(v => !v)}
+              className="w-8 h-8 rounded-full bg-blue-500/20 border border-blue-500/30 flex items-center justify-center shrink-0 focus:outline-none">
+              <span className="text-sm font-bold text-blue-400">
+                {profile.name.charAt(0).toUpperCase()}
+              </span>
+            </button>
+            {showProfile && (
+              <div className="absolute right-0 top-10 bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 shadow-xl z-50 min-w-[180px] sm:hidden">
+                <p className="text-sm font-semibold text-white">{profile.name}</p>
+                 <p className="text-xs text-blue-400 font-medium mt-1">
+                  {profile.role === 'super_admin' ? 'Directeur' : 'Administrateur'}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}
