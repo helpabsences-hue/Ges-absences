@@ -16,6 +16,7 @@
 
 
 // next.config.mjs
+// next.config.mjs
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -30,9 +31,7 @@ const nextConfig = {
   },
   compress: true,
   poweredByHeader: false,
-  experimental: {
-    optimizeCss: true,
-  },
 }
 
 export default nextConfig
+
