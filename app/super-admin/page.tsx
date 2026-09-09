@@ -330,7 +330,6 @@
 //   )
 // }
 
-
 'use client'
 export const dynamic = 'force-dynamic'
 
@@ -401,12 +400,12 @@ export default function SuperAdminDashboard() {
     const { data: profile } = await supabase
       .from('profiles').select('role').eq('id', user.id).single()
 
-    // Only platform_admin can access this page
     if (profile?.role !== 'platform_admin') {
       router.push('/dashboard')
       return
     }
 
+    // Fetch schools basic data
     const { data: schoolsData } = await supabase
       .from('schools')
       .select('id, name, city, country, status, trial_ends_at, paid_until, created_at')
@@ -414,73 +413,29 @@ export default function SuperAdminDashboard() {
 
     if (!schoolsData) { setLoading(false); return }
 
-    const enriched = await Promise.all(schoolsData.map(async (s) => {
-      const [
-        { count: studentCount },
-        { count: teacherCount },
-      ] = await Promise.all([
-        supabase.from('students').select('*', { count: 'exact', head: true }).eq('school_id', s.id),
-        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('school_id', s.id).eq('role', 'teacher'),
-      ])
+    // Fetch all stats via service role API (bypasses RLS)
+    const statsData = await fetch('/api/school-stats')
+      .then(r => r.json())
+      .catch(() => [])
 
-      // Use service role to fetch director (bypasses RLS)
-      const { data: admin } = await fetch('/api/school-director?school_id=' + s.id)
-        .then(r => r.json())
-        .then(d => ({ data: d }))
-        .catch(() => ({ data: null }))
+    const statsMap = Object.fromEntries(
+      (statsData ?? []).map((s: any) => [s.school_id, s])
+    )
 
-      // Get attendance count via students (correct chain)
-      let attendanceCount = 0
-      let sessionCount = 0
-
-      const { data: studentIds } = await supabase
-        .from('students')
-        .select('id')
-        .eq('school_id', s.id)
-
-      if (studentIds && studentIds.length > 0) {
-        const sIds = studentIds.map((st: any) => st.id)
-        const { count: attCount } = await supabase
-          .from('attendance')
-          .select('*', { count: 'exact', head: true })
-          .in('student_id', sIds)
-        attendanceCount = attCount ?? 0
-      }
-
-      // Get session count via teacher_planning school_id
-      const { data: plannings } = await supabase
-        .from('teacher_planning')
-        .select('id')
-        .eq('school_id', s.id)
-
-      if (plannings && plannings.length > 0) {
-        const pIds = plannings.map((p: any) => p.id)
-        const { count: sCount } = await supabase
-          .from('class_sessions')
-          .select('*', { count: 'exact', head: true })
-          .in('planning_id', pIds)
-        sessionCount = sCount ?? 0
-      }
-
-      // Estimate storage
-      const storageMB = Math.round(
-        ((studentCount ?? 0) * 500 +
-         attendanceCount * 200 +
-         sessionCount * 300) / (1024 * 1024) * 100
-      ) / 100
-
+    const enriched = schoolsData.map((s) => {
+      const stats = statsMap[s.id] ?? {}
       return {
         ...s,
-        status:          s.status ?? 'trial',
-        studentCount:    studentCount    ?? 0,
-        teacherCount:    teacherCount    ?? 0,
-        attendanceCount: attendanceCount ?? 0,
-        sessionCount:    sessionCount    ?? 0,
-        storageMB:       storageMB       || 0.01,
-        adminName:       admin?.name     ?? '—',
-        adminEmail:      admin?.email    ?? '—',
+        status:          s.status          ?? 'trial',
+        studentCount:    stats.studentCount    ?? 0,
+        teacherCount:    stats.teacherCount    ?? 0,
+        attendanceCount: stats.attendanceCount ?? 0,
+        sessionCount:    stats.sessionCount    ?? 0,
+        storageMB:       stats.storageMB       ?? 0.01,
+        adminName:       stats.adminName       ?? '—',
+        adminEmail:      stats.adminEmail      ?? '—',
       }
-    }))
+    })
 
     setSchools(enriched)
     setLoading(false)
