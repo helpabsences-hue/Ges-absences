@@ -330,6 +330,7 @@
 //   )
 // }
 
+
 'use client'
 export const dynamic = 'force-dynamic'
 
@@ -421,7 +422,7 @@ export default function SuperAdminDashboard() {
       ] = await Promise.all([
         supabase.from('students').select('*', { count: 'exact', head: true }).eq('school_id', s.id),
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('school_id', s.id).eq('role', 'teacher'),
-        supabase.from('profiles').select('name, email').eq('school_id', s.id).eq('role', 'super_admin').limit(1).maybeSingle(),
+        supabase.from('profiles').select('name, email, role').eq('school_id', s.id).in('role', ['super_admin', 'admin']).order('role', { ascending: false }).limit(1).maybeSingle(),
       ])
 
       // Get attendance count via students (correct chain)
@@ -790,6 +791,26 @@ export default function SuperAdminDashboard() {
                         {updating === school.id ? '...' : '🚫 Désactiver'}
                       </button>
                     )}
+                    {/* Delete school button */}
+                    <button onClick={async () => {
+                      if (!confirm(`Supprimer définitivement "${school.name}" et toutes ses données ?`)) return
+                      setUpdating(school.id)
+                      const res = await fetch('/api/delete-school', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ school_id: school.id })
+                      })
+                      if (res.ok) {
+                        await loadSchools()
+                      } else {
+                        alert('Erreur lors de la suppression')
+                      }
+                      setUpdating(null)
+                    }}
+                      disabled={updating === school.id}
+                      className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-red-900/30 text-red-500 hover:bg-red-900/50 border border-red-900/50 transition disabled:opacity-50">
+                      {updating === school.id ? '...' : '🗑️ Supprimer'}
+                    </button>
                   </div>
                 </div>
               </div>

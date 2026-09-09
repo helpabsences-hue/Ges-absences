@@ -1,64 +1,39 @@
 // app/api/delete-user/route.ts
-import { createServiceClient } from '@/lib/supabase/server'
-import { createClient }        from '@/lib/supabase/server'
-import { NextResponse }        from 'next/server'
+// Deletes user from both profiles table and Supabase Auth
+import { NextResponse, type NextRequest } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+import { createClient as createAdmin } from '@supabase/supabase-js'
 
-export async function POST(request: Request) {
-  const { userId } = await request.json()
-  if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 })
-
-  // Verify caller is admin or super_admin
+export async function POST(request: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: caller } = await supabase
-    .from('profiles').select('role, school_id').eq('id', user.id).single()
+  // Only admin/super_admin/platform_admin can delete users
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
 
-  if (!caller || caller.role === 'teacher') {
+  if (!profile || !['super_admin', 'admin', 'platform_admin'].includes(profile.role)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  // Verify target belongs to same school
-  const { data: target } = await supabase
-    .from('profiles').select('school_id, role').eq('id', userId).single()
+  const { user_id } = await request.json()
+  if (!user_id) return NextResponse.json({ error: 'user_id required' }, { status: 400 })
 
-  if (!target) {
-    return NextResponse.json({ error: 'User not found' }, { status: 404 })
+  const admin = createAdmin(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
+  // Delete from Supabase Auth (this also cascades to profiles via FK)
+  const { error } = await admin.auth.admin.deleteUser(user_id)
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
   }
-
-  if (target.school_id !== caller.school_id) {
-    return NextResponse.json({ error: 'Cannot delete user from another school' }, { status: 403 })
-  }
-
-  if (target.role === 'admin' && caller.role !== 'super_admin') {
-    return NextResponse.json({ error: 'Only super admins can delete admins' }, { status: 403 })
-  }
-
-  const admin = createServiceClient()
-
-  // ── Delete from Supabase Auth FIRST ──────────────────
-  // auth.admin.deleteUser cascades and removes the profile via DB trigger/FK
-  // Do this BEFORE deleting profile to avoid FK constraint issues
-  const { error: authError } = await admin.auth.admin.deleteUser(userId)
-
-  if (authError) {
-    console.error('Auth delete error:', authError.message)
-
-    // Fallback: if auth delete fails, try deleting profile manually
-    // This happens when the auth user doesn't exist but profile does
-    await admin.from('teacher_planning').delete().eq('teacher_id', userId)
-    await admin.from('profiles').delete().eq('id', userId)
-
-    return NextResponse.json({ 
-      success: true, 
-      warning: 'Deleted from profiles only — ' + authError.message 
-    })
-  }
-
-  // Auth delete succeeded — profile is removed by CASCADE
-  // But also clean up related data that CASCADE might miss
-  await admin.from('teacher_planning').delete().eq('teacher_id', userId)
 
   return NextResponse.json({ success: true })
 }

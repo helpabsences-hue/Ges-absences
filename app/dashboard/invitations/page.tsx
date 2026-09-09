@@ -425,7 +425,23 @@ export default function InvitationsPage() {
                           {confirmDeleteId === inv.id ? (
                             <>
                               <span className="text-xs text-slate-400 mx-1">{ui.sure}</span>
-                              <button onClick={async () => { await deleteInvitation(inv.id); setConfirmDeleteId(null) }}
+                              <button onClick={async () => {
+                                const supabase = createClient()
+                                const targetInv = invitations.find(i => i.id === confirmDeleteId)
+                                if (targetInv?.email) {
+                                  const { data: profile } = await supabase
+                                    .from('profiles').select('id').eq('email', targetInv.email).maybeSingle()
+                                  if (profile?.id) {
+                                    await fetch('/api/delete-user', {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ user_id: profile.id })
+                                    })
+                                  }
+                                }
+                                await deleteInvitation(targetInv?.id ?? confirmDeleteId!);
+                                setConfirmDeleteId(null)
+                              }}
                                 className="text-xs bg-red-500/10 hover:bg-red-800 text-red-600 font-semibold px-2.5 py-1.5 rounded-lg transition">{ui.deleteBtn}</button>
                               <button onClick={() => setConfirmDeleteId(null)}
                                 className="text-xs text-slate-500 hover:text-white px-2 py-1.5 rounded-lg hover:bg-slate-800 transition">{ui.cancel}</button>
