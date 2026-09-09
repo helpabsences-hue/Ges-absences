@@ -418,12 +418,16 @@ export default function SuperAdminDashboard() {
       const [
         { count: studentCount },
         { count: teacherCount },
-        { data: admin },
       ] = await Promise.all([
         supabase.from('students').select('*', { count: 'exact', head: true }).eq('school_id', s.id),
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('school_id', s.id).eq('role', 'teacher'),
-        supabase.from('profiles').select('name, email, role').eq('school_id', s.id).in('role', ['super_admin', 'admin']).order('role', { ascending: false }).limit(1).maybeSingle(),
       ])
+
+      // Use service role to fetch director (bypasses RLS)
+      const { data: admin } = await fetch('/api/school-director?school_id=' + s.id)
+        .then(r => r.json())
+        .then(d => ({ data: d }))
+        .catch(() => ({ data: null }))
 
       // Get attendance count via students (correct chain)
       let attendanceCount = 0
