@@ -32,9 +32,28 @@ export async function POST(request: NextRequest) {
 
   if (!students?.length) return NextResponse.json({ queued: 0 })
 
-  // Add to queue (skip already invited)
+  // Get emails of parents who already have an account
+  const parentEmails = students.filter(s => s.parent_email).map(s => s.parent_email)
+  const { data: existingProfiles } = await admin
+    .from('profiles')
+    .select('email')
+    .eq('role', 'parent')
+    .in('email', parentEmails)
+
+  const existingEmails = new Set((existingProfiles ?? []).map((p: any) => p.email))
+
+  // Only queue parents who don't have an account yet
+  // For parents who already have an account → mark directly as accepted
+  const alreadyRegistered = students.filter(s => existingEmails.has(s.parent_email))
+  if (alreadyRegistered.length > 0) {
+    await admin.from('students')
+      .update({ parent_invite_status: 'accepted' })
+      .in('id', alreadyRegistered.map(s => s.id))
+  }
+
+  // Add to queue (skip already invited or already registered)
   const rows = students
-    .filter(s => s.parent_email)
+    .filter(s => s.parent_email && !existingEmails.has(s.parent_email))
     .map(s => ({
       school_id:    profile.school_id,
       student_id:   s.id,

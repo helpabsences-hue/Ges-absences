@@ -1,58 +1,64 @@
+
 // 'use client'
 // export const dynamic = 'force-dynamic'
 
 // import { useEffect, useState, useCallback } from 'react'
 // import { createClient } from '@/lib/supabase/client'
 // import { useRouter } from 'next/navigation'
-// import { LogoIcon } from '@/components/shared/LogoIcon'
 
 // interface School {
-//   id: string
-//   name: string
-//   city: string
-//   country: string
-//   status: string
+//   id:            string
+//   name:          string
+//   city:          string
+//   country:       string
+//   status:        string
 //   trial_ends_at: string | null
-//   paid_until: string | null
-//   created_at: string
-//   studentCount: number
-//   teacherCount: number
-//   adminName: string
-//   adminEmail: string
+//   paid_until:    string | null
+//   created_at:    string
+//   studentCount:  number
+//   teacherCount:  number
+//   adminName:     string
+//   adminEmail:    string
+//   attendanceCount: number
+//   sessionCount:    number
+//   storageMB:       number
 // }
 
 // function StatusBadge({ status, trialEndsAt }: { status: string; trialEndsAt: string | null }) {
-//   const now = new Date()
+//   const now      = new Date()
 //   const trialEnd = trialEndsAt ? new Date(trialEndsAt) : null
 //   const isExpired = status === 'trial' && trialEnd && trialEnd < now
 
 //   if (isExpired) return (
 //     <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg bg-red-500/15 text-red-400">
-//       <span className="w-1.5 h-1.5 rounded-full bg-red-400" />Essai expiré
+//       <span className="w-1.5 h-1.5 rounded-full bg-red-400"/>Essai expiré
 //     </span>
 //   )
 //   if (status === 'trial') return (
 //     <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-400">
-//       <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />Essai
+//       <span className="w-1.5 h-1.5 rounded-full bg-amber-400"/>Essai
 //     </span>
 //   )
 //   if (status === 'active') return (
 //     <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg bg-green-500/15 text-green-400">
-//       <span className="w-1.5 h-1.5 rounded-full bg-green-400" />Actif
+//       <span className="w-1.5 h-1.5 rounded-full bg-green-400"/>Actif
 //     </span>
 //   )
 //   return (
 //     <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg bg-slate-500/15 text-slate-400">
-//       <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />Inactif
+//       <span className="w-1.5 h-1.5 rounded-full bg-slate-400"/>Inactif
 //     </span>
 //   )
 // }
 
 // export default function SuperAdminDashboard() {
-//   const [schools, setSchools] = useState<School[]>([])
-//   const [loading, setLoading] = useState(true)
-//   const [updating, setUpdating] = useState<string | null>(null)
-//   const [search, setSearch] = useState('')
+//   const [schools,      setSchools]      = useState<School[]>([])
+//   const [loading,      setLoading]      = useState(true)
+//   const [updating,     setUpdating]     = useState<string | null>(null)
+//   const [search,       setSearch]       = useState('')
+//   const [realStorageMB,    setRealStorageMB]    = useState<number | null>(null)
+//   const [schoolStorage,    setSchoolStorage]    = useState<Record<string, number>>({})
+//   const [schoolAttendance, setSchoolAttendance] = useState<Record<string, number>>({})
 //   const router = useRouter()
 
 //   const loadSchools = useCallback(async () => {
@@ -63,12 +69,12 @@
 //     const { data: profile } = await supabase
 //       .from('profiles').select('role').eq('id', user.id).single()
 
-//     // Only platform_admin can access this page
 //     if (profile?.role !== 'platform_admin') {
 //       router.push('/dashboard')
 //       return
 //     }
 
+//     // Fetch schools basic data
 //     const { data: schoolsData } = await supabase
 //       .from('schools')
 //       .select('id, name, city, country, status, trial_ends_at, paid_until, created_at')
@@ -76,31 +82,53 @@
 
 //     if (!schoolsData) { setLoading(false); return }
 
-//     const enriched = await Promise.all(schoolsData.map(async (s) => {
-//       const [
-//         { count: studentCount },
-//         { count: teacherCount },
-//         { data: admin },
-//       ] = await Promise.all([
-//         supabase.from('students').select('*', { count: 'exact', head: true }).eq('school_id', s.id),
-//         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('school_id', s.id).eq('role', 'teacher'),
-//         supabase.from('profiles').select('name, email').eq('school_id', s.id).in('role', ['super_admin', 'admin']).limit(1).maybeSingle(),
-//       ])
+//     // Fetch all stats via service role API (bypasses RLS)
+//     const statsData = await fetch('/api/school-stats')
+//       .then(r => r.json())
+//       .catch(() => [])
+
+//     const statsMap = Object.fromEntries(
+//       (statsData ?? []).map((s: any) => [s.school_id, s])
+//     )
+
+//     const enriched = schoolsData.map((s) => {
+//       const stats = statsMap[s.id] ?? {}
 //       return {
 //         ...s,
-//         status: s.status ?? 'trial',
-//         studentCount: studentCount ?? 0,
-//         teacherCount: teacherCount ?? 0,
-//         adminName: admin?.name ?? '—',
-//         adminEmail: admin?.email ?? '—',
+//         status:          s.status          ?? 'trial',
+//         studentCount:    stats.studentCount    ?? 0,
+//         teacherCount:    stats.teacherCount    ?? 0,
+//         attendanceCount: stats.attendanceCount ?? 0,
+//         sessionCount:    stats.sessionCount    ?? 0,
+//         storageMB:       stats.storageMB       ?? 0.01,
+//         adminName:       stats.adminName       ?? '—',
+//         adminEmail:      stats.adminEmail      ?? '—',
 //       }
-//     }))
+//     })
 
 //     setSchools(enriched)
 //     setLoading(false)
 //   }, [router])
 
-//   useEffect(() => { loadSchools() }, [loadSchools])
+//   useEffect(() => {
+//     loadSchools()
+//     fetch('/api/db-storage')
+//       .then(r => r.json())
+//       .then(d => {
+//         if (d.totalMB) setRealStorageMB(d.totalMB)
+//         if (d.schoolStats) {
+//           const storageMap: Record<string, number> = {}
+//           const attendanceMap: Record<string, number> = {}
+//           d.schoolStats.forEach((s: any) => {
+//             storageMap[s.school_id]    = parseFloat(s.storage_mb) || 0
+//             attendanceMap[s.school_id] = parseInt(s.attendance_count) || 0
+//           })
+//           setSchoolStorage(storageMap)
+//           setSchoolAttendance(attendanceMap)
+//         }
+//       })
+//       .catch(console.error)
+//   }, [loadSchools])
 
 //   const updateStatus = async (schoolId: string, status: string, paidMonths?: number) => {
 //     setUpdating(schoolId)
@@ -120,7 +148,7 @@
 //       const d = new Date()
 //       d.setDate(d.getDate() + 30)
 //       updates.trial_ends_at = d.toISOString()
-//       updates.paid_until = null
+//       updates.paid_until    = null
 //     }
 
 //     await supabase.from('schools').update(updates).eq('id', schoolId)
@@ -140,18 +168,24 @@
 //   )
 
 //   const stats = {
-//     total: schools.length,
-//     active: schools.filter(s => s.status === 'active').length,
-//     trial: schools.filter(s => s.status === 'trial' && new Date(s.trial_ends_at ?? '') >= new Date()).length,
-//     expired: schools.filter(s => {
+//     total:      schools.length,
+//     active:     schools.filter(s => s.status === 'active').length,
+//     trial:      schools.filter(s => s.status === 'trial' && new Date(s.trial_ends_at ?? '') >= new Date()).length,
+//     expired:    schools.filter(s => {
 //       const trialEnd = s.trial_ends_at ? new Date(s.trial_ends_at) : null
 //       return s.status === 'trial' && trialEnd && trialEnd < new Date()
 //     }).length,
+//     totalStudents:    schools.reduce((a, s) => a + s.studentCount, 0),
+//     totalAttendance:  schools.reduce((a, s) => a + s.attendanceCount, 0),
+//     totalStorageMB:   Math.round(schools.reduce((a, s) => a + s.storageMB, 0) * 100) / 100,
 //   }
+
+//   const storagePercent = Math.round(((realStorageMB ?? stats.totalStorageMB) / 500) * 100)
+//   const displayMB = realStorageMB ?? stats.totalStorageMB
 
 //   if (loading) return (
 //     <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-//       <div className="w-10 h-10 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
+//       <div className="w-10 h-10 border-2 border-violet-500 border-t-transparent rounded-full animate-spin"/>
 //     </div>
 //   )
 
@@ -162,11 +196,9 @@
 //       <div className="bg-slate-900 border-b border-slate-800 px-6 py-4 sticky top-0 z-10">
 //         <div className="max-w-7xl mx-auto flex items-center justify-between">
 //           <div className="flex items-center gap-3">
+//             <div className="w-9 h-9 bg-violet-600 rounded-xl flex items-center justify-center font-bold text-white text-sm">A</div>
 //             <div>
-//               <LogoIcon className="w-8 h-8 shrink-0" />
-//               <span className="text-lg font-bold tracking-tight text-white">
-//                 Attend<span className="text-blue-400">efy</span>
-//               </span>
+//               <span className="font-bold text-white">Attend<span className="text-blue-400">efy</span></span>
 //               <span className="ml-2 text-xs bg-violet-500/20 text-violet-400 border border-violet-500/30 px-2 py-0.5 rounded-full font-medium">
 //                 Platform Admin
 //               </span>
@@ -176,7 +208,7 @@
 //             className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition px-3 py-1.5 rounded-lg hover:bg-slate-800">
 //             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 //               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-//                 d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+//                 d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
 //             </svg>
 //             Déconnecter
 //           </button>
@@ -193,10 +225,10 @@
 //         {/* Stats */}
 //         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
 //           {[
-//             { label: 'Total', value: stats.total, color: 'text-white', bg: 'bg-slate-900' },
-//             { label: 'Actifs', value: stats.active, color: 'text-green-400', bg: 'bg-green-500/10' },
-//             { label: 'En essai', value: stats.trial, color: 'text-amber-400', bg: 'bg-amber-500/10' },
-//             { label: 'Essai expiré', value: stats.expired, color: 'text-red-400', bg: 'bg-red-500/10' },
+//             { label: 'Total',         value: stats.total,   color: 'text-white',     bg: 'bg-slate-900'    },
+//             { label: 'Actifs',        value: stats.active,  color: 'text-green-400', bg: 'bg-green-500/10' },
+//             { label: 'En essai',      value: stats.trial,   color: 'text-amber-400', bg: 'bg-amber-500/10' },
+//             { label: 'Essai expiré', value: stats.expired, color: 'text-red-400',   bg: 'bg-red-500/10'   },
 //           ].map(s => (
 //             <div key={s.label} className={`${s.bg} border border-slate-800 rounded-2xl p-5 text-center`}>
 //               <p className={`text-3xl font-bold ${s.color}`}>{s.value}</p>
@@ -205,14 +237,63 @@
 //           ))}
 //         </div>
 
+//         {/* Storage monitor */}
+//         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-5">
+//           <div className="flex items-center justify-between">
+//             <div>
+//               <h2 className="text-sm font-semibold text-white">Stockage Supabase</h2>
+//               <p className="text-xs text-slate-500 mt-0.5">Limite free tier: 500 MB</p>
+//             </div>
+//             <div className="text-right">
+//               <p className="text-2xl font-bold text-white">{displayMB} <span className="text-sm font-normal text-slate-400">MB</span></p>
+//               <p className="text-xs text-slate-500">{storagePercent}% utilisé</p>
+//             </div>
+//           </div>
+
+//           {/* Global progress bar */}
+//           <div>
+//             <div className="w-full bg-slate-800 rounded-full h-3">
+//               <div
+//                 className={`h-3 rounded-full transition-all ${
+//                   storagePercent > 80 ? 'bg-red-500' :
+//                   storagePercent > 60 ? 'bg-amber-500' : 'bg-blue-500'
+//                 }`}
+//                 style={{ width: `${Math.min(storagePercent, 100)}%` }}/>
+//             </div>
+//             <div className="flex justify-between text-xs text-slate-600 mt-1">
+//               <span>0 MB</span>
+//               <span className={storagePercent > 80 ? 'text-red-400 font-semibold' : ''}>
+//                 {storagePercent > 80 ? '⚠️ Pensez à upgrader Supabase Pro ($25/mois)' : `${(500 - displayMB).toFixed(2)} MB restants`}
+//               </span>
+//               <span>500 MB</span>
+//             </div>
+//           </div>
+
+//           {/* Global data stats */}
+//           <div className="grid grid-cols-3 gap-4 pt-2 border-t border-slate-800">
+//             <div className="text-center">
+//               <p className="text-xl font-bold text-white">{stats.totalStudents.toLocaleString()}</p>
+//               <p className="text-xs text-slate-500 mt-0.5">Étudiants total</p>
+//             </div>
+//             <div className="text-center">
+//               <p className="text-xl font-bold text-white">{stats.totalAttendance.toLocaleString()}</p>
+//               <p className="text-xs text-slate-500 mt-0.5">Relevés présence</p>
+//             </div>
+//             <div className="text-center">
+//               <p className="text-xl font-bold text-white">{schools.length}</p>
+//               <p className="text-xs text-slate-500 mt-0.5">Établissements</p>
+//             </div>
+//           </div>
+//         </div>
+
 //         {/* Search */}
 //         <div className="relative">
 //           <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-//             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+//             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
 //           </svg>
 //           <input value={search} onChange={e => setSearch(e.target.value)}
 //             placeholder="Rechercher par nom, ville ou email..."
-//             className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500" />
+//             className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"/>
 //         </div>
 
 //         {/* Schools */}
@@ -222,10 +303,10 @@
 //               <p className="text-slate-400">Aucun établissement trouvé</p>
 //             </div>
 //           ) : filtered.map(school => {
-//             const trialEnd = school.trial_ends_at ? new Date(school.trial_ends_at) : null
-//             const paidUntil = school.paid_until ? new Date(school.paid_until) : null
+//             const trialEnd  = school.trial_ends_at ? new Date(school.trial_ends_at) : null
+//             const paidUntil = school.paid_until    ? new Date(school.paid_until)    : null
 //             const isExpired = school.status === 'trial' && trialEnd && trialEnd < new Date()
-//             const daysLeft = trialEnd ? Math.max(0, Math.ceil((trialEnd.getTime() - Date.now()) / 86400000)) : null
+//             const daysLeft  = trialEnd ? Math.max(0, Math.ceil((trialEnd.getTime() - Date.now()) / 86400000)) : null
 
 //             return (
 //               <div key={school.id} className="bg-slate-900 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition">
@@ -233,11 +314,11 @@
 //                   <div className="flex-1 min-w-0">
 //                     <div className="flex items-center gap-3 flex-wrap">
 //                       <h3 className="font-semibold text-white text-base">{school.name}</h3>
-//                       <StatusBadge status={school.status} trialEndsAt={school.trial_ends_at} />
+//                       <StatusBadge status={school.status} trialEndsAt={school.trial_ends_at}/>
 //                     </div>
 //                     <div className="flex flex-wrap gap-3 mt-2 text-xs text-slate-500">
 //                       <span>📍 {school.city}, {school.country}</span>
-//                       <span>👤 {school.adminName} — {school.adminEmail}</span>
+//                       <span>👤 Directeur: {school.adminName} — {school.adminEmail}</span>
 //                       <span>📅 Inscrit le {new Date(school.created_at).toLocaleDateString('fr-FR')}</span>
 //                     </div>
 //                     <div className="flex flex-wrap gap-4 mt-3">
@@ -248,6 +329,25 @@
 //                       <div className="flex items-center gap-1.5">
 //                         <span className="text-lg font-bold text-white">{school.teacherCount}</span>
 //                         <span className="text-xs text-slate-500">enseignants</span>
+//                       </div>
+//                       <div className="flex items-center gap-1.5">
+//                         <span className="text-lg font-bold text-slate-400">
+//                           {(schoolAttendance[school.id] ?? school.attendanceCount).toLocaleString()}
+//                         </span>
+//                         <span className="text-xs text-slate-500">relevés</span>
+//                       </div>
+//                       <div className="flex items-center gap-1.5">
+//                         {(() => {
+//                           const mb = schoolStorage[school.id] ?? school.storageMB
+//                           return (
+//                             <>
+//                               <span className={`text-lg font-bold ${mb > 10 ? 'text-amber-400' : 'text-slate-400'}`}>
+//                                 {mb < 0.001 ? '<0.001' : mb < 0.1 ? mb.toFixed(4) : mb.toFixed(2)}
+//                               </span>
+//                               <span className="text-xs text-slate-500">MB</span>
+//                             </>
+//                           )
+//                         })()}
 //                       </div>
 //                       {school.status === 'trial' && !isExpired && daysLeft !== null && (
 //                         <div className="flex items-center gap-1.5">
@@ -319,6 +419,26 @@
 //                         {updating === school.id ? '...' : '🚫 Désactiver'}
 //                       </button>
 //                     )}
+//                     {/* Delete school button */}
+//                     <button onClick={async () => {
+//                       if (!confirm(`Supprimer définitivement "${school.name}" et toutes ses données ?`)) return
+//                       setUpdating(school.id)
+//                       const res = await fetch('/api/delete-school', {
+//                         method: 'POST',
+//                         headers: { 'Content-Type': 'application/json' },
+//                         body: JSON.stringify({ school_id: school.id })
+//                       })
+//                       if (res.ok) {
+//                         await loadSchools()
+//                       } else {
+//                         alert('Erreur lors de la suppression')
+//                       }
+//                       setUpdating(null)
+//                     }}
+//                       disabled={updating === school.id}
+//                       className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-red-900/30 text-red-500 hover:bg-red-900/50 border border-red-900/50 transition disabled:opacity-50">
+//                       {updating === school.id ? '...' : '🗑️ Supprimer'}
+//                     </button>
 //                   </div>
 //                 </div>
 //               </div>
@@ -329,6 +449,7 @@
 //     </div>
 //   )
 // }
+
 
 'use client'
 export const dynamic = 'force-dynamic'
@@ -343,6 +464,7 @@ interface School {
   city:          string
   country:       string
   status:        string
+  plan:          string
   trial_ends_at: string | null
   paid_until:    string | null
   created_at:    string
@@ -353,6 +475,18 @@ interface School {
   attendanceCount: number
   sessionCount:    number
   storageMB:       number
+}
+
+const PLAN_LIMITS: Record<string, number> = {
+  starter: 150,
+  growth:  350,
+  premium: Infinity,
+}
+
+const PLAN_LABELS: Record<string, { label: string; color: string; bg: string }> = {
+  starter: { label: 'Starter',  color: 'text-blue-400',   bg: 'bg-blue-500/10 border-blue-500/30'   },
+  growth:  { label: 'Growth',   color: 'text-purple-400', bg: 'bg-purple-500/10 border-purple-500/30' },
+  premium: { label: 'Premium',  color: 'text-green-400',  bg: 'bg-green-500/10 border-green-500/30'  },
 }
 
 function StatusBadge({ status, trialEndsAt }: { status: string; trialEndsAt: string | null }) {
@@ -383,10 +517,10 @@ function StatusBadge({ status, trialEndsAt }: { status: string; trialEndsAt: str
 }
 
 export default function SuperAdminDashboard() {
-  const [schools,      setSchools]      = useState<School[]>([])
-  const [loading,      setLoading]      = useState(true)
-  const [updating,     setUpdating]     = useState<string | null>(null)
-  const [search,       setSearch]       = useState('')
+  const [schools,          setSchools]          = useState<School[]>([])
+  const [loading,          setLoading]          = useState(true)
+  const [updating,         setUpdating]         = useState<string | null>(null)
+  const [search,           setSearch]           = useState('')
   const [realStorageMB,    setRealStorageMB]    = useState<number | null>(null)
   const [schoolStorage,    setSchoolStorage]    = useState<Record<string, number>>({})
   const [schoolAttendance, setSchoolAttendance] = useState<Record<string, number>>({})
@@ -405,15 +539,13 @@ export default function SuperAdminDashboard() {
       return
     }
 
-    // Fetch schools basic data
     const { data: schoolsData } = await supabase
       .from('schools')
-      .select('id, name, city, country, status, trial_ends_at, paid_until, created_at')
+      .select('id, name, city, country, status, plan, trial_ends_at, paid_until, created_at')
       .order('created_at', { ascending: false })
 
     if (!schoolsData) { setLoading(false); return }
 
-    // Fetch all stats via service role API (bypasses RLS)
     const statsData = await fetch('/api/school-stats')
       .then(r => r.json())
       .catch(() => [])
@@ -426,7 +558,8 @@ export default function SuperAdminDashboard() {
       const stats = statsMap[s.id] ?? {}
       return {
         ...s,
-        status:          s.status          ?? 'trial',
+        status:          s.status       ?? 'trial',
+        plan:            s.plan         ?? 'starter',
         studentCount:    stats.studentCount    ?? 0,
         teacherCount:    stats.teacherCount    ?? 0,
         attendanceCount: stats.attendanceCount ?? 0,
@@ -467,10 +600,8 @@ export default function SuperAdminDashboard() {
     const updates: any = { status }
 
     if (status === 'active' && paidMonths) {
-      // Find current paid_until to add on top of it
       const school = schools.find(s => s.id === schoolId)
       const currentPaidUntil = school?.paid_until ? new Date(school.paid_until) : new Date()
-      // If paid_until is in the past, start from today
       const baseDate = currentPaidUntil > new Date() ? currentPaidUntil : new Date()
       baseDate.setMonth(baseDate.getMonth() + paidMonths)
       updates.paid_until = baseDate.toISOString()
@@ -485,6 +616,12 @@ export default function SuperAdminDashboard() {
     await supabase.from('schools').update(updates).eq('id', schoolId)
     await loadSchools()
     setUpdating(null)
+  }
+
+  const updatePlan = async (schoolId: string, plan: string) => {
+    const supabase = createClient()
+    await supabase.from('schools').update({ plan }).eq('id', schoolId)
+    setSchools(prev => prev.map(s => s.id === schoolId ? { ...s, plan } : s))
   }
 
   const handleLogout = async () => {
@@ -506,13 +643,13 @@ export default function SuperAdminDashboard() {
       const trialEnd = s.trial_ends_at ? new Date(s.trial_ends_at) : null
       return s.status === 'trial' && trialEnd && trialEnd < new Date()
     }).length,
-    totalStudents:    schools.reduce((a, s) => a + s.studentCount, 0),
-    totalAttendance:  schools.reduce((a, s) => a + s.attendanceCount, 0),
-    totalStorageMB:   Math.round(schools.reduce((a, s) => a + s.storageMB, 0) * 100) / 100,
+    totalStudents:   schools.reduce((a, s) => a + s.studentCount, 0),
+    totalAttendance: schools.reduce((a, s) => a + s.attendanceCount, 0),
+    totalStorageMB:  Math.round(schools.reduce((a, s) => a + s.storageMB, 0) * 100) / 100,
   }
 
   const storagePercent = Math.round(((realStorageMB ?? stats.totalStorageMB) / 500) * 100)
-  const displayMB = realStorageMB ?? stats.totalStorageMB
+  const displayMB      = realStorageMB ?? stats.totalStorageMB
 
   if (loading) return (
     <div className="min-h-screen bg-slate-950 flex items-center justify-center">
@@ -559,7 +696,7 @@ export default function SuperAdminDashboard() {
             { label: 'Total',         value: stats.total,   color: 'text-white',     bg: 'bg-slate-900'    },
             { label: 'Actifs',        value: stats.active,  color: 'text-green-400', bg: 'bg-green-500/10' },
             { label: 'En essai',      value: stats.trial,   color: 'text-amber-400', bg: 'bg-amber-500/10' },
-            { label: 'Essai expiré', value: stats.expired, color: 'text-red-400',   bg: 'bg-red-500/10'   },
+            { label: 'Essai expiré',  value: stats.expired, color: 'text-red-400',   bg: 'bg-red-500/10'   },
           ].map(s => (
             <div key={s.label} className={`${s.bg} border border-slate-800 rounded-2xl p-5 text-center`}>
               <p className={`text-3xl font-bold ${s.color}`}>{s.value}</p>
@@ -580,15 +717,9 @@ export default function SuperAdminDashboard() {
               <p className="text-xs text-slate-500">{storagePercent}% utilisé</p>
             </div>
           </div>
-
-          {/* Global progress bar */}
           <div>
             <div className="w-full bg-slate-800 rounded-full h-3">
-              <div
-                className={`h-3 rounded-full transition-all ${
-                  storagePercent > 80 ? 'bg-red-500' :
-                  storagePercent > 60 ? 'bg-amber-500' : 'bg-blue-500'
-                }`}
+              <div className={`h-3 rounded-full transition-all ${storagePercent > 80 ? 'bg-red-500' : storagePercent > 60 ? 'bg-amber-500' : 'bg-blue-500'}`}
                 style={{ width: `${Math.min(storagePercent, 100)}%` }}/>
             </div>
             <div className="flex justify-between text-xs text-slate-600 mt-1">
@@ -599,8 +730,6 @@ export default function SuperAdminDashboard() {
               <span>500 MB</span>
             </div>
           </div>
-
-          {/* Global data stats */}
           <div className="grid grid-cols-3 gap-4 pt-2 border-t border-slate-800">
             <div className="text-center">
               <p className="text-xl font-bold text-white">{stats.totalStudents.toLocaleString()}</p>
@@ -627,7 +756,7 @@ export default function SuperAdminDashboard() {
             className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"/>
         </div>
 
-        {/* Schools */}
+        {/* Schools list */}
         <div className="space-y-3">
           {filtered.length === 0 ? (
             <div className="bg-slate-900 border border-slate-800 rounded-2xl py-16 text-center">
@@ -638,23 +767,61 @@ export default function SuperAdminDashboard() {
             const paidUntil = school.paid_until    ? new Date(school.paid_until)    : null
             const isExpired = school.status === 'trial' && trialEnd && trialEnd < new Date()
             const daysLeft  = trialEnd ? Math.max(0, Math.ceil((trialEnd.getTime() - Date.now()) / 86400000)) : null
+            const planInfo  = PLAN_LABELS[school.plan] ?? PLAN_LABELS.starter
+            const planLimit = PLAN_LIMITS[school.plan] ?? 150
+            const atLimit   = school.studentCount >= planLimit
+            const nearLimit = school.studentCount >= planLimit * 0.8 && !atLimit
 
             return (
               <div key={school.id} className="bg-slate-900 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
+
+                    {/* Name + status */}
                     <div className="flex items-center gap-3 flex-wrap">
                       <h3 className="font-semibold text-white text-base">{school.name}</h3>
                       <StatusBadge status={school.status} trialEndsAt={school.trial_ends_at}/>
                     </div>
+
+                    {/* Info row */}
                     <div className="flex flex-wrap gap-3 mt-2 text-xs text-slate-500">
                       <span>📍 {school.city}, {school.country}</span>
                       <span>👤 Directeur: {school.adminName} — {school.adminEmail}</span>
                       <span>📅 Inscrit le {new Date(school.created_at).toLocaleDateString('fr-FR')}</span>
                     </div>
+
+                    {/* Plan row */}
+                    <div className="flex flex-wrap items-center gap-3 mt-3">
+                      {/* Plan badge */}
+                      <span className={`text-xs font-bold px-2.5 py-1 rounded-lg border ${planInfo.bg} ${planInfo.color}`}>
+                        {planInfo.label}
+                      </span>
+                      {/* Plan selector */}
+                      <select
+                        value={school.plan}
+                        onChange={e => updatePlan(school.id, e.target.value)}
+                        className="text-xs bg-slate-800 border border-slate-700 text-slate-300 rounded-lg px-2 py-1 focus:outline-none focus:border-blue-500 cursor-pointer">
+                        <option value="starter">Starter (≤150 élèves)</option>
+                        <option value="growth">Growth (≤350 élèves)</option>
+                        <option value="premium">Premium (illimité)</option>
+                      </select>
+                      {/* Limit warnings */}
+                      {atLimit && (
+                        <span className="text-xs font-semibold text-red-400 bg-red-500/10 border border-red-500/30 px-2 py-0.5 rounded-lg">
+                          ⚠️ Limite atteinte ({school.studentCount}/{planLimit})
+                        </span>
+                      )}
+                      {nearLimit && (
+                        <span className="text-xs font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-lg">
+                          ⚠️ Proche limite ({school.studentCount}/{planLimit})
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Stats row */}
                     <div className="flex flex-wrap gap-4 mt-3">
                       <div className="flex items-center gap-1.5">
-                        <span className="text-lg font-bold text-white">{school.studentCount}</span>
+                        <span className={`text-lg font-bold ${atLimit ? 'text-red-400' : 'text-white'}`}>{school.studentCount}</span>
                         <span className="text-xs text-slate-500">étudiants</span>
                       </div>
                       <div className="flex items-center gap-1.5">
@@ -705,10 +872,10 @@ export default function SuperAdminDashboard() {
                           className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30 transition disabled:opacity-50">
                           {updating === school.id ? '...' : '✅ 1 mois'}
                         </button>
-                        <button onClick={() => updateStatus(school.id, 'active', 12)}
+                        <button onClick={() => updateStatus(school.id, 'active', 10)}
                           disabled={updating === school.id}
                           className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30 transition disabled:opacity-50">
-                          {updating === school.id ? '...' : '✅ 1 an'}
+                          {updating === school.id ? '...' : '✅ 1 an scolaire'}
                         </button>
                         <button onClick={() => updateStatus(school.id, 'active', 1200)}
                           disabled={updating === school.id}
@@ -724,15 +891,20 @@ export default function SuperAdminDashboard() {
                           className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 border border-blue-500/30 transition disabled:opacity-50">
                           {updating === school.id ? '...' : '🔄 +1 mois'}
                         </button>
-                        <button onClick={() => updateStatus(school.id, 'active', 12)}
+                        <button onClick={() => updateStatus(school.id, 'active', 10)}
                           disabled={updating === school.id}
                           className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 border border-blue-500/30 transition disabled:opacity-50">
-                          {updating === school.id ? '...' : '🔄 +1 an'}
+                          {updating === school.id ? '...' : '🔄 +1 an scolaire'}
                         </button>
                         <button onClick={() => updateStatus(school.id, 'active', 1200)}
                           disabled={updating === school.id}
                           className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-violet-500/20 text-violet-400 hover:bg-violet-500/30 border border-violet-500/30 transition disabled:opacity-50">
                           {updating === school.id ? '...' : '♾️ À vie'}
+                        </button>
+                        <button onClick={() => updateStatus(school.id, 'inactive')}
+                          disabled={updating === school.id}
+                          className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30 transition disabled:opacity-50">
+                          {updating === school.id ? '...' : '🚫 Désactiver'}
                         </button>
                       </>
                     )}
@@ -743,14 +915,6 @@ export default function SuperAdminDashboard() {
                         {updating === school.id ? '...' : '🔁 Reset essai 30j'}
                       </button>
                     )}
-                    {school.status === 'active' && (
-                      <button onClick={() => updateStatus(school.id, 'inactive')}
-                        disabled={updating === school.id}
-                        className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30 transition disabled:opacity-50">
-                        {updating === school.id ? '...' : '🚫 Désactiver'}
-                      </button>
-                    )}
-                    {/* Delete school button */}
                     <button onClick={async () => {
                       if (!confirm(`Supprimer définitivement "${school.name}" et toutes ses données ?`)) return
                       setUpdating(school.id)
@@ -759,11 +923,8 @@ export default function SuperAdminDashboard() {
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ school_id: school.id })
                       })
-                      if (res.ok) {
-                        await loadSchools()
-                      } else {
-                        alert('Erreur lors de la suppression')
-                      }
+                      if (res.ok) { await loadSchools() }
+                      else { alert('Erreur lors de la suppression') }
                       setUpdating(null)
                     }}
                       disabled={updating === school.id}

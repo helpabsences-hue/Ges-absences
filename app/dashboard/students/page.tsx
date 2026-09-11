@@ -159,37 +159,16 @@
 //       const id = await addStudent(form)
 //       if (!id) { setSaving(false); return }
 
-//       // Auto-invite parent if email provided
-//       if (form.parent_email?.trim()) {
-//         try {
-//           await fetch('/api/invite-parent', {
-//             method: 'POST',
-//             headers: { 'Content-Type': 'application/json' },
-//             body: JSON.stringify({
-//               student_id: id,
-//               parent_email: form.parent_email.trim(),
-//               parent_name: form.parent_name?.trim() || undefined,
-//               student_name: form.name.trim(),
-//               school_name: 'Attendefy',
-//             }),
-//           })
-//           toast.success(lang === 'fr'
-//             ? `Invitation envoyée à ${form.parent_email}`
-//             : lang === 'ar'
-//               ? `تم إرسال الدعوة إلى ${form.parent_email}`
-//               : `Invitation sent to ${form.parent_email}`
-//           )
-//         } catch {
-//           // Non-blocking — student still created successfully
-//           console.error('Failed to invite parent')
-//         }
-//       }
+//       // Parent invitation is now handled manually from the Invitations page
+//       // No auto-send to avoid Brevo rate limits
 //     }
 
 //     setSaving(false); handleCancel()
 //   }
 
-
+//   const handleDelete = async (id: string) => {
+//     await deleteStudent(id)
+//   }
 
 //   const filtered = students.filter((s) => {
 //     const matchSearch = s.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -344,7 +323,7 @@
 //               <p className={`text-[11px] text-amber-400/80 mt-2 ${isRtl ? 'text-right' : ''}`}>
 //                 ⚠️ {lang === 'ar' ? 'سيُرسل بريد تنبيه تلقائياً إلى ولي الأمر عند تجاوز حد الغيابات المحدد.'
 //                   : lang === 'fr' ? "Un email d'alerte sera envoyé automatiquement au parent quand le seuil d'absences est atteint."
-//                   : 'An alert email will be sent automatically to the parent when the absence threshold is reached.'}
+//                     : 'An alert email will be sent automatically to the parent when the absence threshold is reached.'}
 //               </p>
 //             </div>
 
@@ -415,7 +394,7 @@
 //                 <><svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
 //                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
 //                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-//                 </svg>{ui.cancelLabel}</>
+//                 </svg>{ui.deleteLabel}…</>
 //               ) : `🗑 ${ui.deleteLabel} (${selected.size})`}
 //             </button>
 //           </div>
@@ -517,19 +496,18 @@
 //                         )}
 //                       </div>
 //                     </td>
-//                       <td className="px-4 sm:px-5 py-3 sm:py-4">
-//                         <div className={`flex items-center gap-1 opacity-0 group-hover:opacity-100 transition
+//                     <td className="px-4 sm:px-5 py-3 sm:py-4">
+//                       <div className={`flex items-center gap-1 opacity-0 group-hover:opacity-100 transition
 //                         ${isRtl ? 'flex-row-reverse justify-start' : 'justify-end'}`}>
-//                           <button onClick={() => openEdit(student)}
-//                             className="p-1.5 rounded-lg text-slate-500 hover:text-blue-400 hover:bg-blue-500/10 transition">
-//                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-//                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-//                                 d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-//                             </svg>
-//                           </button>
-
-//                         </div>
-//                       </td>
+//                         <button onClick={() => openEdit(student)}
+//                           className="p-1.5 rounded-lg text-slate-500 hover:text-blue-400 hover:bg-blue-500/10 transition">
+//                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+//                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+//                               d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+//                           </svg>
+//                         </button>
+//                       </div>
+//                     </td>
 //                   </tr>
 //                 ))}
 //               </tbody>
@@ -559,8 +537,10 @@
 //   )
 // }
 
+
 'use client'
 import { toast } from 'sonner'
+import { createClient } from '@/lib/supabase/client'
 
 export const dynamic = 'force-dynamic'
 // app/dashboard/students/page.tsx
@@ -652,6 +632,8 @@ const UI: Record<Lang, {
   },
 }
 
+const PLAN_LIMITS: Record<string, number> = { starter: 150, growth: 350, premium: Infinity }
+
 const EMPTY: AddStudentPayload = { name: '', massar_code: '', group_id: '', parent_name: '', parent_email: '', parent_phone: '' }
 
 export default function StudentsPage() {
@@ -662,21 +644,21 @@ export default function StudentsPage() {
   const ui = UI[lang]
   const isRtl = lang === 'ar'
 
-  const [showForm, setShowForm] = useState(false)
-  const [showUpload, setShowUpload] = useState(false)
-  const [form, setForm] = useState<AddStudentPayload>(EMPTY)
-  const [saving, setSaving] = useState(false)
-  const [editId, setEditId] = useState<string | null>(null)
-  const [formError, setFormError] = useState('')
-  const [search, setSearch] = useState('')
+  const [showForm,    setShowForm]    = useState(false)
+  const [showUpload,  setShowUpload]  = useState(false)
+  const [form,        setForm]        = useState<AddStudentPayload>(EMPTY)
+  const [saving,      setSaving]      = useState(false)
+  const [editId,      setEditId]      = useState<string | null>(null)
+  const [formError,   setFormError]   = useState('')
+  const [search,      setSearch]      = useState('')
   const [filterGroup, setFilterGroup] = useState('')
-  const [selected, setSelected] = useState<Set<string>>(new Set())
-  const [deleting, setDeleting] = useState(false)
+  const [selected,    setSelected]    = useState<Set<string>>(new Set())
+  const [deleting,    setDeleting]    = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
 
   useEffect(() => { fetchStudents(); fetchGroups() }, [fetchStudents, fetchGroups])
 
-  const openAdd = () => { setShowUpload(false); setEditId(null); setForm(EMPTY); setFormError(''); setShowForm(true) }
+  const openAdd  = () => { setShowUpload(false); setEditId(null); setForm(EMPTY); setFormError(''); setShowForm(true) }
   const openEdit = (s: StudentWithGroup) => {
     setShowUpload(false); setEditId(s.id)
     setForm({ name: s.name, massar_code: s.massar_code, group_id: s.group_id ?? '', parent_name: (s as any).parent_name ?? '', parent_email: (s as any).parent_email ?? '', parent_phone: (s as any).parent_phone ?? '' })
@@ -684,21 +666,8 @@ export default function StudentsPage() {
   }
   const handleCancel = () => { setShowForm(false); setEditId(null); setForm(EMPTY); setFormError('') }
 
-  const toggleSelect = (id: string) => {
-    setSelected(prev => {
-      const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
-      return next
-    })
-  }
-
-  const toggleSelectAll = (ids: string[]) => {
-    if (ids.every(id => selected.has(id))) {
-      setSelected(new Set())
-    } else {
-      setSelected(new Set(ids))
-    }
-  }
+  const toggleSelect    = (id: string) => setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
+  const toggleSelectAll = (ids: string[]) => ids.every(id => selected.has(id)) ? setSelected(new Set()) : setSelected(new Set(ids))
 
   const handleBulkDelete = async () => {
     setDeleting(true)
@@ -708,30 +677,50 @@ export default function StudentsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.name.trim()) { setFormError(ui.errName); return }
+    if (!form.name.trim())        { setFormError(ui.errName); return }
     if (!form.massar_code.trim()) { setFormError(ui.errMassar); return }
-    if (!form.group_id) { setFormError(ui.errGroup); return }
-    if (!form.parent_phone?.trim()) { setFormError(lang === 'ar' ? 'رقم هاتف ولي الأمر مطلوب' : lang === 'fr' ? 'Le téléphone du parent est obligatoire' : 'Parent phone is required'); return }
+    if (!form.group_id)           { setFormError(ui.errGroup); return }
+    if (!form.parent_phone?.trim()) {
+      setFormError(lang === 'ar' ? 'رقم هاتف ولي الأمر مطلوب' : lang === 'fr' ? 'Le téléphone du parent est obligatoire' : 'Parent phone is required')
+      return
+    }
     setSaving(true); setFormError('')
 
     if (editId) {
       await updateStudent(editId, form)
     } else {
+      // ── Check plan limit before adding ──
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: profile } = await supabase.from('profiles').select('school_id').eq('id', user.id).single()
+        if (profile?.school_id) {
+          const { data: school } = await supabase.from('schools').select('plan').eq('id', profile.school_id).single()
+          const plan  = school?.plan ?? 'starter'
+          const limit = PLAN_LIMITS[plan] ?? 150
+          if (students.length >= limit) {
+            const msg = lang === 'ar'
+              ? `تم الوصول إلى حد الخطة (${limit} طالب). تواصل معنا للترقية.`
+              : lang === 'fr'
+              ? `Limite du plan ${plan} atteinte (${limit} élèves). Contactez-nous pour upgrader.`
+              : `Plan limit reached (${limit} students). Contact us to upgrade.`
+            setFormError(msg)
+            setSaving(false)
+            return
+          }
+        }
+      }
+
       const id = await addStudent(form)
       if (!id) { setSaving(false); return }
-
-      // Parent invitation is now handled manually from the Invitations page
-      // No auto-send to avoid Brevo rate limits
     }
 
     setSaving(false); handleCancel()
   }
 
-  const handleDelete = async (id: string) => {
-    await deleteStudent(id)
-  }
+  const handleDelete = async (id: string) => { await deleteStudent(id) }
 
-  const filtered = students.filter((s) => {
+  const filtered = students.filter(s => {
     const matchSearch = s.name.toLowerCase().includes(search.toLowerCase()) ||
       s.massar_code.toLowerCase().includes(search.toLowerCase())
     return matchSearch && (filterGroup ? s.group_id === filterGroup : true)
@@ -744,9 +733,8 @@ export default function StudentsPage() {
   return (
     <div className={`max-w-6xl mx-auto space-y-4 sm:space-y-6 ${isRtl ? 'text-right' : ''}`}>
 
-      {/* ── Header ─────────────────────────────────────── */}
-      <div className={`flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-0 sm:justify-between
-        ${isRtl ? 'sm:flex-row-reverse' : ''}`}>
+      {/* Header */}
+      <div className={`flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-0 sm:justify-between ${isRtl ? 'sm:flex-row-reverse' : ''}`}>
         <div>
           <h2 className="text-lg sm:text-xl font-semibold text-white">{ui.title}</h2>
           <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
@@ -754,32 +742,25 @@ export default function StudentsPage() {
           </p>
         </div>
         <div className={`flex items-center gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
-          {/* Import CSV */}
           <button onClick={() => { setShowUpload(v => !v); setShowForm(false) }}
-            className={`flex items-center gap-2 text-sm font-medium px-3 sm:px-4 py-2.5 rounded-xl border transition-all
-              ${isRtl ? 'flex-row-reverse' : ''}
-              ${showUpload
-                ? 'bg-slate-700 border-slate-600 text-white'
-                : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'}`}>
+            className={`flex items-center gap-2 text-sm font-medium px-3 sm:px-4 py-2.5 rounded-xl border transition-all ${isRtl ? 'flex-row-reverse' : ''}
+              ${showUpload ? 'bg-slate-700 border-slate-600 text-white' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'}`}>
             <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
             </svg>
             <span className="hidden sm:inline">{ui.importCsv}</span>
           </button>
-          {/* Add */}
           <button onClick={openAdd}
-            className={`flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium
-              px-3 sm:px-4 py-2.5 rounded-xl transition-all ${isRtl ? 'flex-row-reverse' : ''}`}>
+            className={`flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium px-3 sm:px-4 py-2.5 rounded-xl transition-all ${isRtl ? 'flex-row-reverse' : ''}`}>
             <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/>
             </svg>
             <span className="hidden sm:inline">{ui.addStudent}</span>
           </button>
         </div>
       </div>
 
-      {/* ── CSV Upload panel ───────────────────────────── */}
+      {/* CSV Upload panel */}
       {showUpload && (
         <div className="bg-slate-900 border border-slate-700 rounded-2xl p-4 sm:p-5">
           <div className={`flex items-center justify-between mb-4 ${isRtl ? 'flex-row-reverse' : ''}`}>
@@ -787,10 +768,9 @@ export default function StudentsPage() {
               <h3 className="text-sm font-semibold text-white">{ui.importTitle}</h3>
               <p className="text-xs text-slate-500 mt-0.5">{ui.importDesc}</p>
             </div>
-            <button onClick={() => setShowUpload(false)}
-              className="text-slate-500 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition shrink-0">
+            <button onClick={() => setShowUpload(false)} className="text-slate-500 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition shrink-0">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/>
               </svg>
             </button>
           </div>
@@ -798,97 +778,67 @@ export default function StudentsPage() {
         </div>
       )}
 
-      {/* ── Add / Edit form ────────────────────────────── */}
+      {/* Add / Edit form */}
       {showForm && (
         <div className="bg-slate-900 border border-slate-700 rounded-2xl p-4 sm:p-5">
-          <h3 className="text-sm font-semibold text-white mb-4">
-            {editId ? ui.editStudent : ui.newStudent}
-          </h3>
+          <h3 className="text-sm font-semibold text-white mb-4">{editId ? ui.editStudent : ui.newStudent}</h3>
           <form onSubmit={handleSubmit} className="space-y-4">
-
-            {/* ── Student info ── */}
             <div>
               <p className={`text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 ${isRtl ? 'text-right' : ''}`}>
                 {lang === 'ar' ? 'معلومات الطالب' : lang === 'fr' ? 'Informations étudiant' : 'Student info'}
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className={`block text-xs font-medium text-slate-400 mb-1.5 ${isRtl ? 'text-right' : ''}`}>
-                    {ui.fullName} <span className="text-red-400">*</span>
-                  </label>
-                  <input type="text" value={form.name}
-                    onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                    placeholder={ui.fullNamePlaceholder} className={inputCls} />
+                  <label className={`block text-xs font-medium text-slate-400 mb-1.5 ${isRtl ? 'text-right' : ''}`}>{ui.fullName} <span className="text-red-400">*</span></label>
+                  <input type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder={ui.fullNamePlaceholder} className={inputCls}/>
                 </div>
                 <div>
-                  <label className={`block text-xs font-medium text-slate-400 mb-1.5 ${isRtl ? 'text-right' : ''}`}>
-                    {ui.massarCode} <span className="text-red-400">*</span>
-                  </label>
-                  <input type="text" value={form.massar_code}
-                    onChange={e => setForm(f => ({ ...f, massar_code: e.target.value.toUpperCase() }))}
-                    placeholder={ui.massarPlaceholder}
-                    className={`${inputCls} font-mono`} />
+                  <label className={`block text-xs font-medium text-slate-400 mb-1.5 ${isRtl ? 'text-right' : ''}`}>{ui.massarCode} <span className="text-red-400">*</span></label>
+                  <input type="text" value={form.massar_code} onChange={e => setForm(f => ({ ...f, massar_code: e.target.value.toUpperCase() }))} placeholder={ui.massarPlaceholder} className={`${inputCls} font-mono`}/>
                 </div>
                 <div>
-                  <label className={`block text-xs font-medium text-slate-400 mb-1.5 ${isRtl ? 'text-right' : ''}`}>
-                    {ui.group} <span className="text-red-400">*</span>
-                  </label>
-                  <select value={form.group_id}
-                    onChange={e => setForm(f => ({ ...f, group_id: e.target.value }))}
-                    className={inputCls}>
+                  <label className={`block text-xs font-medium text-slate-400 mb-1.5 ${isRtl ? 'text-right' : ''}`}>{ui.group} <span className="text-red-400">*</span></label>
+                  <select value={form.group_id} onChange={e => setForm(f => ({ ...f, group_id: e.target.value }))} className={inputCls}>
                     <option value="">{ui.selectGroup}</option>
-                    {groups.map(g => (
-                      <option key={g.id} value={g.id}>{g.name} ({ui.year} {g.year})</option>
-                    ))}
+                    {groups.map(g => <option key={g.id} value={g.id}>{g.name} ({ui.year} {g.year})</option>)}
                   </select>
                 </div>
               </div>
             </div>
 
-            {/* ── Parent info ── */}
             <div>
               <p className={`text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 ${isRtl ? 'text-right' : ''}`}>
                 {lang === 'ar' ? 'معلومات ولي الأمر' : lang === 'fr' ? 'Informations parent' : 'Parent info'}
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className={`block text-xs font-medium text-slate-400 mb-1.5 ${isRtl ? 'text-right' : ''}`}>
-                    {lang === 'ar' ? 'اسم ولي الأمر' : lang === 'fr' ? 'Nom du parent' : 'Parent name'}
-                  </label>
-                  <input type="text" value={form.parent_name ?? ''}
-                    onChange={e => setForm(f => ({ ...f, parent_name: e.target.value }))}
-                    placeholder={lang === 'ar' ? 'محمد العمراني' : lang === 'fr' ? 'Mohamed Amrani' : 'Mohamed Amrani'}
-                    className={inputCls} />
+                  <label className={`block text-xs font-medium text-slate-400 mb-1.5 ${isRtl ? 'text-right' : ''}`}>{lang === 'ar' ? 'اسم ولي الأمر' : lang === 'fr' ? 'Nom du parent' : 'Parent name'}</label>
+                  <input type="text" value={form.parent_name ?? ''} onChange={e => setForm(f => ({ ...f, parent_name: e.target.value }))} placeholder={lang === 'ar' ? 'محمد العمراني' : 'Mohamed Amrani'} className={inputCls}/>
                 </div>
                 <div>
-                  <label className={`block text-xs font-medium text-slate-400 mb-1.5 ${isRtl ? 'text-right' : ''}`}>
-                    {lang === 'ar' ? 'هاتف ولي الأمر' : lang === 'fr' ? 'Téléphone parent' : 'Parent phone'}{' '}
-                    <span className="text-red-400">*</span>
-                  </label>
-                  <input type="tel" value={form.parent_phone ?? ''}
-                    onChange={e => setForm(f => ({ ...f, parent_phone: e.target.value }))}
-                    placeholder="+212 6XX XXX XXX"
-                    className={inputCls} />
+                  <label className={`block text-xs font-medium text-slate-400 mb-1.5 ${isRtl ? 'text-right' : ''}`}>{lang === 'ar' ? 'هاتف ولي الأمر' : lang === 'fr' ? 'Téléphone parent' : 'Parent phone'} <span className="text-red-400">*</span></label>
+                  <input type="tel" value={form.parent_phone ?? ''} onChange={e => setForm(f => ({ ...f, parent_phone: e.target.value }))} placeholder="+212 6XX XXX XXX" className={inputCls}/>
                 </div>
                 <div>
                   <label className={`block text-xs font-medium text-slate-400 mb-1.5 ${isRtl ? 'text-right' : ''}`}>
                     {lang === 'ar' ? 'بريد ولي الأمر' : lang === 'fr' ? 'Email parent' : 'Parent email'}{' '}
                     <span className="text-slate-600 text-[10px]">{lang === 'fr' ? '(optionnel)' : lang === 'ar' ? '(اختياري)' : '(optional)'}</span>
                   </label>
-                  <input type="email" value={form.parent_email ?? ''}
-                    onChange={e => setForm(f => ({ ...f, parent_email: e.target.value }))}
-                    placeholder={lang === 'ar' ? 'parent@email.com' : 'parent@email.com'}
-                    className={inputCls} />
+                  <input type="email" value={form.parent_email ?? ''} onChange={e => setForm(f => ({ ...f, parent_email: e.target.value }))} placeholder="parent@email.com" className={inputCls}/>
                 </div>
               </div>
               <p className={`text-[11px] text-amber-400/80 mt-2 ${isRtl ? 'text-right' : ''}`}>
                 ⚠️ {lang === 'ar' ? 'سيُرسل بريد تنبيه تلقائياً إلى ولي الأمر عند تجاوز حد الغيابات المحدد.'
                   : lang === 'fr' ? "Un email d'alerte sera envoyé automatiquement au parent quand le seuil d'absences est atteint."
-                    : 'An alert email will be sent automatically to the parent when the absence threshold is reached.'}
+                  : 'An alert email will be sent automatically to the parent when the absence threshold is reached.'}
               </p>
             </div>
 
-            {formError && <p className="text-xs text-red-400">{formError}</p>}
+            {formError && (
+              <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2.5 text-red-400 text-xs">
+                {formError}
+              </div>
+            )}
 
             <div className={`flex gap-3 pt-1 ${isRtl ? 'flex-row-reverse' : ''}`}>
               <button type="submit" disabled={saving}
@@ -904,126 +854,87 @@ export default function StudentsPage() {
         </div>
       )}
 
-      {/* Error */}
-      {error && (
-        <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-red-400 text-sm">{error}</div>
-      )}
+      {error && <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-red-400 text-sm">{error}</div>}
 
-      {/* ── Filters ────────────────────────────────────── */}
+      {/* Filters */}
       <div className={`flex flex-wrap gap-2 sm:gap-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
         <div className="relative">
-          <svg className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500
-            ${isRtl ? 'right-3' : 'left-3'}`}
-            fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          <svg className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 ${isRtl ? 'right-3' : 'left-3'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
           </svg>
-          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
-            placeholder={ui.searchPlaceholder}
-            className={`bg-slate-900 border border-slate-800 rounded-xl py-2.5 text-sm text-white
-              placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition
-              w-48 sm:w-64 ${isRtl ? 'pr-9 pl-3 text-right' : 'pl-9 pr-3'}`} />
+          <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder={ui.searchPlaceholder}
+            className={`bg-slate-900 border border-slate-800 rounded-xl py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition w-48 sm:w-64 ${isRtl ? 'pr-9 pl-3 text-right' : 'pl-9 pr-3'}`}/>
         </div>
-        <select value={filterGroup} onChange={(e) => setFilterGroup(e.target.value)}
-          className={`bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white
-            focus:outline-none focus:ring-2 focus:ring-blue-500 transition ${isRtl ? 'text-right' : ''}`}>
+        <select value={filterGroup} onChange={e => setFilterGroup(e.target.value)}
+          className={`bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition ${isRtl ? 'text-right' : ''}`}>
           <option value="">{ui.allGroups}</option>
           {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
         </select>
         {(search || filterGroup) && (
-          <button onClick={() => { setSearch(''); setFilterGroup('') }}
-            className="text-xs text-slate-500 hover:text-white px-3 py-2 rounded-xl hover:bg-slate-800 transition">
-            {ui.clearFilters}
-          </button>
+          <button onClick={() => { setSearch(''); setFilterGroup('') }} className="text-xs text-slate-500 hover:text-white px-3 py-2 rounded-xl hover:bg-slate-800 transition">{ui.clearFilters}</button>
         )}
       </div>
 
-      {/* ── Bulk delete bar ────────────────────────────── */}
+      {/* Bulk delete bar */}
       {selected.size > 0 && (
         <div className="bg-blue-600/10 border border-blue-500/30 rounded-xl px-4 py-3 flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm font-medium text-blue-400">
             {selected.size} étudiant{selected.size > 1 ? 's' : ''} sélectionné{selected.size > 1 ? 's' : ''}
           </p>
           <div className="flex items-center gap-2">
-            <button onClick={() => setSelected(new Set())}
-              className="text-xs text-slate-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-slate-800 transition">
-              {ui.cancelLabel}
-            </button>
+            <button onClick={() => setSelected(new Set())} className="text-xs text-slate-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-slate-800 transition">{ui.cancelLabel}</button>
             <button onClick={() => setConfirmOpen(true)} disabled={deleting}
               className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white transition disabled:opacity-50 flex items-center gap-1.5">
-              {deleting ? (
-                <><svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>{ui.deleteLabel}…</>
-              ) : `🗑 ${ui.deleteLabel} (${selected.size})`}
+              {deleting ? (<><svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>{ui.deleteLabel}…</>) : `🗑 ${ui.deleteLabel} (${selected.size})`}
             </button>
           </div>
         </div>
       )}
 
-      {/* ── Table ──────────────────────────────────────── */}
+      {/* Table */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-16">
             <svg className="w-6 h-6 text-blue-400 animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
             </svg>
           </div>
         ) : filtered.length === 0 ? (
           <div className="py-16 text-center">
             <div className="w-12 h-12 bg-slate-800 rounded-xl flex items-center justify-center mx-auto mb-3">
               <svg className="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                  d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
               </svg>
             </div>
-            <p className="text-slate-400 font-medium">
-              {search || filterGroup ? ui.noMatch : ui.noStudents}
-            </p>
-            {!search && !filterGroup && (
-              <p className="text-slate-600 text-sm mt-1">{ui.noStudentsHint}</p>
-            )}
+            <p className="text-slate-400 font-medium">{search || filterGroup ? ui.noMatch : ui.noStudents}</p>
+            {!search && !filterGroup && <p className="text-slate-600 text-sm mt-1">{ui.noStudentsHint}</p>}
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-slate-800">
-                  {/* Select all checkbox */}
                   <th className="px-4 py-3 w-10">
-                    <input type="checkbox"
-                      checked={filtered.length > 0 && filtered.every(s => selected.has(s.id))}
-                      onChange={() => toggleSelectAll(filtered.map(s => s.id))}
-                      className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-blue-600 cursor-pointer" />
+                    <input type="checkbox" checked={filtered.length > 0 && filtered.every(s => selected.has(s.id))} onChange={() => toggleSelectAll(filtered.map(s => s.id))}
+                      className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-blue-600 cursor-pointer"/>
                   </th>
                   {[ui.colName, ui.colMassar, ui.colGroup, lang === 'fr' ? 'Parent' : lang === 'ar' ? 'ولي الأمر' : 'Parent', ''].map((h, i) => (
-                    <th key={i}
-                      className={`px-4 sm:px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider
-                        ${i === 3 ? '' : isRtl ? 'text-right' : 'text-left'}`}>
-                      {h}
-                    </th>
+                    <th key={i} className={`px-4 sm:px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider ${i === 3 ? '' : isRtl ? 'text-right' : 'text-left'}`}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
-                {filtered.map((student) => (
-                  <tr key={student.id}
-                    className={`hover:bg-slate-800/40 transition group ${selected.has(student.id) ? 'bg-blue-600/5' : ''}`}>
-                    {/* Row checkbox */}
+                {filtered.map(student => (
+                  <tr key={student.id} className={`hover:bg-slate-800/40 transition group ${selected.has(student.id) ? 'bg-blue-600/5' : ''}`}>
                     <td className="px-4 py-3">
-                      <input type="checkbox"
-                        checked={selected.has(student.id)}
-                        onChange={() => toggleSelect(student.id)}
-                        className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-blue-600 cursor-pointer" />
+                      <input type="checkbox" checked={selected.has(student.id)} onChange={() => toggleSelect(student.id)}
+                        className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-blue-600 cursor-pointer"/>
                     </td>
                     <td className="px-4 sm:px-5 py-3 sm:py-4">
                       <div className={`flex items-center gap-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
-                        <div className="w-7 h-7 rounded-full dark:bg-slate-700 bg-neutral-400 flex items-center justify-center shrink-0">
-                          <span className="text-xs font-bold dark:text-slate-300 text-neutral-700">
-                            {student.name.charAt(0).toUpperCase()}
-                          </span>
+                        <div className="w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center shrink-0">
+                          <span className="text-xs font-bold text-slate-300">{student.name.charAt(0).toUpperCase()}</span>
                         </div>
                         <span className="text-sm font-medium text-white">{student.name}</span>
                       </div>
@@ -1033,38 +944,22 @@ export default function StudentsPage() {
                     </td>
                     <td className="px-4 sm:px-5 py-3 sm:py-4">
                       {student.groups
-                        ? <span className="text-[10px] bg-slate-800 text-slate-300 font-medium px-1 py-1 rounded-lg">{student.groups.name}</span>
-                        : <span className="text-slate-600 text-sm">{ui.unassigned}</span>
-                      }
+                        ? <span className="text-[10px] bg-slate-800 text-slate-300 font-medium px-2 py-1 rounded-lg">{student.groups.name}</span>
+                        : <span className="text-slate-600 text-sm">{ui.unassigned}</span>}
                     </td>
                     <td className="px-4 sm:px-5 py-3 sm:py-4">
                       <div className="space-y-1">
-                        {(student as any).parent_name && (
-                          <p className="text-xs text-slate-300 font-medium">{(student as any).parent_name}</p>
-                        )}
-                        {(student as any).parent_phone && (
-                          <p className="text-xs text-slate-500 flex items-center gap-1">
-                            📞 {(student as any).parent_phone}
-                          </p>
-                        )}
-                        {(student as any).parent_email && (
-                          <p className="text-xs text-slate-500 flex items-center gap-1">
-                            ✉️ {(student as any).parent_email}
-                          </p>
-                        )}
-                        {!(student as any).parent_phone && !(student as any).parent_email && (
-                          <span className="text-xs text-slate-700">—</span>
-                        )}
+                        {(student as any).parent_name  && <p className="text-xs text-slate-300 font-medium">{(student as any).parent_name}</p>}
+                        {(student as any).parent_phone && <p className="text-xs text-slate-500">📞 {(student as any).parent_phone}</p>}
+                        {(student as any).parent_email && <p className="text-xs text-slate-500">✉️ {(student as any).parent_email}</p>}
+                        {!(student as any).parent_phone && !(student as any).parent_email && <span className="text-xs text-slate-700">—</span>}
                       </div>
                     </td>
                     <td className="px-4 sm:px-5 py-3 sm:py-4">
-                      <div className={`flex items-center gap-1 opacity-0 group-hover:opacity-100 transition
-                        ${isRtl ? 'flex-row-reverse justify-start' : 'justify-end'}`}>
-                        <button onClick={() => openEdit(student)}
-                          className="p-1.5 rounded-lg text-slate-500 hover:text-blue-400 hover:bg-blue-500/10 transition">
+                      <div className={`flex items-center gap-1 opacity-0 group-hover:opacity-100 transition ${isRtl ? 'flex-row-reverse justify-start' : 'justify-end'}`}>
+                        <button onClick={() => openEdit(student)} className="p-1.5 rounded-lg text-slate-500 hover:text-blue-400 hover:bg-blue-500/10 transition">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                           </svg>
                         </button>
                       </div>
@@ -1077,7 +972,6 @@ export default function StudentsPage() {
         )}
       </div>
 
-      {/* Footer count */}
       {filtered.length > 0 && (
         <p className={`text-xs text-slate-600 ${isRtl ? 'text-left' : 'text-right'}`}>
           {ui.showing} {filtered.length} {ui.of} {students.length}
