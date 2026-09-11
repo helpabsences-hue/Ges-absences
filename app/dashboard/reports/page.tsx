@@ -5,13 +5,13 @@
 
 // import { useEffect, useState, useCallback } from 'react'
 // import * as XLSX from 'xlsx'
-// import { createClient } from '@/lib/supabase/client'
-// import { useGroupStore } from '@/stores/useGroupStore'
+// import { createClient }     from '@/lib/supabase/client'
+// import { useGroupStore }    from '@/stores/useGroupStore'
 // import { useSettingsStore } from '@/stores/useSettingsStore'
 
 // import { type Lang, type MainTab, type StatTab, type FilterType, type GroupStat, type StudentStat, type AbsenceRow, PIE_COLORS, parseTime, fmtHours } from '@/components/analytics/reports/types'
-// import { ReportCharts } from '@/components/analytics/reports/ReportCharts'
-// import { ReportStatsTables } from '@/components/analytics/reports/ReportStatsTables'
+// import { ReportCharts }       from '@/components/analytics/reports/ReportCharts'
+// import { ReportStatsTables }  from '@/components/analytics/reports/ReportStatsTables'
 // import { ReportDetailsTable } from '@/components/analytics/reports/ReportDetailsTable'
 
 // const UI: Record<Lang, Record<string, string>> = {
@@ -76,23 +76,23 @@
 
 // export default function ReportsPage() {
 //   const { groups, fetchGroups } = useGroupStore()
-//   const { language } = useSettingsStore()
-//   const lang = (language || 'fr') as Lang
-//   const ui = UI[lang]
-//   const isRtl = lang === 'ar'
+//   const { language }            = useSettingsStore()
+//   const lang       = (language || 'fr') as Lang
+//   const ui         = UI[lang]
+//   const isRtl      = lang === 'ar'
 //   const dateLocale = lang === 'ar' ? 'ar-MA' : lang === 'en' ? 'en-GB' : 'fr-FR'
 
-//   const [dateFrom, setDateFrom] = useState(() => { const d = new Date(); d.setDate(d.getDate() - 30); return d.toISOString().split('T')[0] })
-//   const [dateTo, setDateTo] = useState(() => new Date().toISOString().split('T')[0])
+//   const [dateFrom,      setDateFrom]      = useState(() => { const d = new Date(); d.setDate(d.getDate()-30); return d.toISOString().split('T')[0] })
+//   const [dateTo,        setDateTo]        = useState(() => new Date().toISOString().split('T')[0])
 //   const [selectedGroup, setSelectedGroup] = useState('')
-//   const [mainTab, setMainTab] = useState<MainTab>('charts')
-//   const [statTab, setStatTab] = useState<StatTab>('group')
-//   const [filterType, setFilterType] = useState<FilterType>('all')
-//   const [groupStats, setGroupStats] = useState<GroupStat[]>([])
-//   const [studentStats, setStudentStats] = useState<StudentStat[]>([])
-//   const [reasonData, setReasonData] = useState<{ name: string; value: number; fill: string }[]>([])
+//   const [mainTab,       setMainTab]       = useState<MainTab>('charts')
+//   const [statTab,       setStatTab]       = useState<StatTab>('group')
+//   const [filterType,    setFilterType]    = useState<FilterType>('all')
+//   const [groupStats,    setGroupStats]    = useState<GroupStat[]>([])
+//   const [studentStats,  setStudentStats]  = useState<StudentStat[]>([])
+//   const [reasonData,    setReasonData]    = useState<{ name: string; value: number; fill: string }[]>([])
 //   const [schoolYears, setSchoolYears] = useState<{ label: string; from: string; to: string }[]>([])
-//   const [absenceRows, setAbsenceRows] = useState<AbsenceRow[]>([])
+//   const [absenceRows,   setAbsenceRows]   = useState<AbsenceRow[]>([])
 
 //   // Fetch distinct school years from class_sessions
 //   useEffect(() => {
@@ -116,16 +116,16 @@
 
 //       const years = Array.from(yearSet).sort((a, b) => b - a).map(startYear => ({
 //         label: `${startYear}–${startYear + 1}`,
-//         from: `${startYear}-09-01`,
-//         to: `${startYear + 1}-06-30`,
+//         from:  `${startYear}-09-01`,
+//         to:    `${startYear + 1}-06-30`,
 //       }))
 
 //       setSchoolYears(years)
 //     }
 //     fetchYears()
 //   }, [])
-//   const [totals, setTotals] = useState({ sessions: 0, present: 0, absent: 0, late: 0 })
-//   const [loading, setLoading] = useState(false)
+//   const [totals,        setTotals]        = useState({ sessions: 0, present: 0, absent: 0, late: 0 })
+//   const [loading,       setLoading]       = useState(false)
 
 //   useEffect(() => { fetchGroups() }, [fetchGroups])
 
@@ -134,7 +134,7 @@
 //     const supabase = createClient()
 //     const { data: rows } = await supabase
 //       .from('attendance')
-//       .select(`id, status, reason,
+//       .select(`id, status, reason, arrival_time,
 //         students ( id, name, massar_code, group_id, groups ( id, name ) ),
 //         class_sessions!inner ( session_date,
 //           teacher_planning!inner ( group_id, start_time, end_time,
@@ -144,7 +144,7 @@
 
 //     if (!rows) { setLoading(false); return }
 
-//     const valid = rows.filter((r: any) => r.class_sessions?.session_date)
+//     const valid    = rows.filter((r: any) => r.class_sessions?.session_date)
 //     const filtered = selectedGroup
 //       ? valid.filter((r: any) => r.class_sessions?.teacher_planning?.group_id === selectedGroup)
 //       : valid
@@ -155,11 +155,23 @@
 //       return Math.max(0, parseTime(tp.end_time) - parseTime(tp.start_time))
 //     }
 
+//     const getLateMinutes = (r: any) => {
+//       const tp = r.class_sessions?.teacher_planning
+//       if (!tp?.start_time) return 0
+//       // If exact arrival time recorded — use it
+//       if (r.arrival_time) {
+//         const late = parseTime(r.arrival_time) - parseTime(tp.start_time)
+//         return Math.max(0, late)
+//       }
+//       // Fallback: half session
+//       return Math.round(getDuration(r) / 2)
+//     }
+
 //     setTotals({
 //       sessions: new Set(valid.map((r: any) => r.class_sessions?.session_date)).size,
-//       present: filtered.filter((r: any) => r.status === 'present').length,
-//       absent: filtered.filter((r: any) => r.status === 'absent').length,
-//       late: filtered.filter((r: any) => r.status === 'late').length,
+//       present:  filtered.filter((r: any) => r.status === 'present').length,
+//       absent:   filtered.filter((r: any) => r.status === 'absent').length,
+//       late:     filtered.filter((r: any) => r.status === 'late').length,
 //     })
 
 //     const gMap: Record<string, GroupStat> = {}
@@ -168,10 +180,10 @@
 //       if (!gMap[g.id]) gMap[g.id] = { group_id: g.id, group_name: g.name, year: g.year, total: 0, present: 0, absent: 0, late: 0, rate: 0, absenceMinutes: 0 }
 //       gMap[g.id].total++
 //       if (r.status === 'present') gMap[g.id].present++
-//       if (r.status === 'absent') { gMap[g.id].absent++; gMap[g.id].absenceMinutes += getDuration(r) }
-//       if (r.status === 'late') { gMap[g.id].late++; gMap[g.id].absenceMinutes += Math.round(getDuration(r) / 2) }
+//       if (r.status === 'absent')  { gMap[g.id].absent++;  gMap[g.id].absenceMinutes += getDuration(r) }
+//       if (r.status === 'late')    { gMap[g.id].late++;    gMap[g.id].absenceMinutes += getLateMinutes(r) }
 //     })
-//     setGroupStats(Object.values(gMap).map(g => ({ ...g, rate: g.total > 0 ? Math.round(((g.present + g.late) / g.total) * 100) : 0 })).sort((a, b) => a.rate - b.rate))
+//     setGroupStats(Object.values(gMap).map(g => ({ ...g, rate: g.total > 0 ? Math.round(((g.present + g.late) / g.total) * 100) : 0 })).sort((a,b) => a.rate-b.rate))
 
 //     const sMap: Record<string, StudentStat> = {}
 //     filtered.forEach((r: any) => {
@@ -179,10 +191,10 @@
 //       if (!sMap[s.id]) sMap[s.id] = { student_id: s.id, student_name: s.name, massar_code: s.massar_code, group_name: s.groups?.name ?? '—', total: 0, present: 0, absent: 0, late: 0, rate: 0, absenceMinutes: 0 }
 //       sMap[s.id].total++
 //       if (r.status === 'present') sMap[s.id].present++
-//       if (r.status === 'absent') { sMap[s.id].absent++; sMap[s.id].absenceMinutes += getDuration(r) }
-//       if (r.status === 'late') { sMap[s.id].late++; sMap[s.id].absenceMinutes += Math.round(getDuration(r) / 2) }
+//       if (r.status === 'absent')  { sMap[s.id].absent++;  sMap[s.id].absenceMinutes += getDuration(r) }
+//       if (r.status === 'late')    { sMap[s.id].late++;    sMap[s.id].absenceMinutes += getLateMinutes(r) }
 //     })
-//     setStudentStats(Object.values(sMap).map(s => ({ ...s, rate: s.total > 0 ? Math.round(((s.present + s.late) / s.total) * 100) : 0 })).sort((a, b) => a.rate - b.rate))
+//     setStudentStats(Object.values(sMap).map(s => ({ ...s, rate: s.total > 0 ? Math.round(((s.present + s.late) / s.total) * 100) : 0 })).sort((a,b) => a.rate-b.rate))
 
 //     const rMap: Record<string, number> = {}
 //     filtered.filter((r: any) => r.status === 'absent').forEach((r: any) => {
@@ -195,13 +207,15 @@
 //       filtered.filter((r: any) => r.status === 'absent' || r.status === 'late')
 //         .map((r: any) => {
 //           const tp = r.class_sessions?.teacher_planning
+//           const lateMinutes = r.status === 'late' ? getLateMinutes(r) : getDuration(r)
 //           return {
 //             id: r.id, studentName: r.students?.name ?? '—', massarCode: r.students?.massar_code ?? '—',
 //             groupName: r.students?.groups?.name ?? tp?.groups?.name ?? '—',
 //             courseName: tp?.courses?.name ?? '—', date: r.class_sessions.session_date,
-//             timeSlot: tp?.start_time && tp?.end_time ? `${tp.start_time.slice(0, 5)}–${tp.end_time.slice(0, 5)}` : '—',
+//             timeSlot: tp?.start_time && tp?.end_time ? `${tp.start_time.slice(0,5)}–${tp.end_time.slice(0,5)}` : '—',
 //             status: r.status, reason: r.reason?.trim() || '', justified: !!r.reason?.trim(),
-//             durationMinutes: getDuration(r),
+//             durationMinutes: lateMinutes,
+//             arrival_time: r.arrival_time ?? null,
 //           }
 //         }).sort((a, b) => b.date.localeCompare(a.date))
 //     )
@@ -215,8 +229,8 @@
 //   // ── Excel Export (replaces CSV) ───────────────────────
 //   const handleExportPdf = () => {
 //     const params = new URLSearchParams({
-//       from: dateFrom,
-//       to: dateTo,
+//       from:  dateFrom,
+//       to:    dateTo,
 //       lang,
 //       ...(selectedGroup ? { group: selectedGroup } : {}),
 //     })
@@ -291,7 +305,6 @@
 //       <div className="bg-slate-900 border border-slate-800 rounded-2xl px-4 sm:px-5 py-4">
 
 
-
 //         <div className={`flex flex-wrap items-end gap-3 sm:gap-4 ${isRtl ? 'flex-row-reverse' : ''}`}>
 //           <div>
 //             <label className={`block text-xs font-medium text-slate-400 mb-1.5 ${isRtl ? 'text-right' : ''}`}>{ui.dateFrom}</label>
@@ -313,11 +326,11 @@
 //           </div>
 //           <div className={`flex gap-1.5 ${isRtl ? 'flex-row-reverse' : ''}`}>
 //             {[
-//               { label: lang === 'ar' ? '٧أيام' : lang === 'en' ? '7d' : '7j', days: 7 },
+//               { label: lang === 'ar' ? '٧أيام' : lang === 'en' ? '7d' : '7j',  days: 7  },
 //               { label: lang === 'ar' ? '٣٠يوم' : lang === 'en' ? '30d' : '30j', days: 30 },
 //               { label: lang === 'ar' ? '٩٠يوم' : lang === 'en' ? '90d' : '90j', days: 90 },
 //             ].map(({ label, days }) => (
-//               <button key={label} onClick={() => { const d = new Date(); d.setDate(d.getDate() - days); setDateFrom(d.toISOString().split('T')[0]); setDateTo(new Date().toISOString().split('T')[0]) }}
+//               <button key={label} onClick={() => { const d = new Date(); d.setDate(d.getDate()-days); setDateFrom(d.toISOString().split('T')[0]); setDateTo(new Date().toISOString().split('T')[0]) }}
 //                 className="text-xs font-medium px-3 py-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 border border-slate-700 transition">
 //                 {label}
 //               </button>
@@ -325,10 +338,13 @@
 //           </div>
 //         </div>
 //       </div>
+
+
+
 //       {/* Main tabs */}
 //       <div className={`flex gap-1 bg-slate-900 border border-slate-800 rounded-xl p-1 w-fit ${isRtl ? 'flex-row-reverse' : ''}`}>
 //         {([
-//           { key: 'charts' as MainTab, label: ui.tabStats },
+//           { key: 'charts'  as MainTab, label: ui.tabStats   },
 //           { key: 'details' as MainTab, label: ui.tabDetails },
 //         ]).map(({ key, label }) => (
 //           <button key={key} onClick={() => setMainTab(key)}
@@ -350,13 +366,11 @@
 //           <ReportStatsTables
 //             loading={loading} statTab={statTab} setStatTab={setStatTab}
 //             groupStats={groupStats} studentStats={studentStats} isRtl={isRtl}
-//             labels={{
-//               byGroup: ui.byGroup, byStudent: ui.byStudent, colGroup: ui.colGroup,
+//             labels={{ byGroup: ui.byGroup, byStudent: ui.byStudent, colGroup: ui.colGroup,
 //               colPresent: ui.colPresent, colLate: ui.colLate, colAbsent: ui.colAbsent,
 //               colHours: ui.colHours, colRate: ui.colRate, colStudent: ui.colStudent,
 //               colClass: ui.colClass, atRisk: ui.atRisk, records: ui.records,
-//               hours: ui.hours, noData: ui.noData
-//             }}
+//               hours: ui.hours, noData: ui.noData }}
 //           />
 //         </div>
 //       )}
@@ -369,8 +383,7 @@
 //           setFilterType={setFilterType} onExport={handleExportCsv}
 //           onExportPdf={handleExportPdf}
 //           isRtl={isRtl} dateLocale={dateLocale}
-//           labels={{
-//             allFilter: ui.allFilter, absentsFilter: ui.absentsFilter,
+//           labels={{ allFilter: ui.allFilter, absentsFilter: ui.absentsFilter,
 //             latesFilter: ui.latesFilter, exportCsv: ui.exportCsv,
 //             exportPdf: ui.exportPdf,
 //             noRecords: ui.noRecords, adjustFilters: ui.adjustFilters,
@@ -378,8 +391,7 @@
 //             colDate: ui.colDate, colType: ui.colType, colHours: ui.colHours,
 //             colReason: ui.colReason, colState: ui.colState,
 //             absentBadge: ui.absentBadge, lateBadge: ui.lateBadge,
-//             justified: ui.justified, notJustified: ui.notJustified, hours: ui.hours
-//           }}
+//             justified: ui.justified, notJustified: ui.notJustified, hours: ui.hours }}
 //         />
 //       )}
 //     </div>
@@ -618,9 +630,10 @@ export default function ReportsPage() {
   // ── Excel Export (replaces CSV) ───────────────────────
   const handleExportPdf = () => {
     const params = new URLSearchParams({
-      from:  dateFrom,
-      to:    dateTo,
+      from:   dateFrom,
+      to:     dateTo,
       lang,
+      filter: filterType,
       ...(selectedGroup ? { group: selectedGroup } : {}),
     })
     window.open(`/api/export-pdf?${params.toString()}`, '_blank')
@@ -693,6 +706,7 @@ export default function ReportsPage() {
       {/* Filters */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl px-4 sm:px-5 py-4">
 
+        
 
         <div className={`flex flex-wrap items-end gap-3 sm:gap-4 ${isRtl ? 'flex-row-reverse' : ''}`}>
           <div>
@@ -728,7 +742,7 @@ export default function ReportsPage() {
         </div>
       </div>
 
-
+     
 
       {/* Main tabs */}
       <div className={`flex gap-1 bg-slate-900 border border-slate-800 rounded-xl p-1 w-fit ${isRtl ? 'flex-row-reverse' : ''}`}>

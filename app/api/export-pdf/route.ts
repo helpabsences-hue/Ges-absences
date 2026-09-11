@@ -4,10 +4,11 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
-  const dateFrom      = searchParams.get('from')  ?? ''
-  const dateTo        = searchParams.get('to')    ?? ''
-  const selectedGroup = searchParams.get('group') ?? ''
-  const lang          = searchParams.get('lang')  ?? 'fr'
+  const dateFrom      = searchParams.get('from')   ?? ''
+  const dateTo        = searchParams.get('to')     ?? ''
+  const selectedGroup = searchParams.get('group')  ?? ''
+  const lang          = searchParams.get('lang')   ?? 'fr'
+  const filterType    = searchParams.get('filter') ?? 'all'
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -41,7 +42,11 @@ export async function GET(request: NextRequest) {
   const rate    = total > 0 ? Math.round(((present + late) / total) * 100) : 0
 
   const absenceRows = filtered
-    .filter((r: any) => r.status === 'absent' || r.status === 'late')
+    .filter((r: any) => {
+      if (filterType === 'absent') return r.status === 'absent'
+      if (filterType === 'late')   return r.status === 'late'
+      return r.status === 'absent' || r.status === 'late'
+    })
     .map((r: any) => ({
       student: r.students?.name ?? '—',
       massar:  r.students?.massar_code ?? '—',
