@@ -285,7 +285,7 @@
       <p class="section-desc" style="margin:12px auto 0">14 minutes pour comprendre comment votre école peut fonctionner.</p>
     </div>
     <div class="video-wrapper">
-      <iframe width="100%" height="450" src="https://www.youtube.com/embed/3204yIcIvX0?rel=0&modestbranding=1" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+      <iframe width="100%" height="450" src="https://youtu.be/wxZII60xWhc" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
     </div>
   </section>
 
@@ -405,56 +405,97 @@
         <h2 class="display display-lg">Un prix par établissement</h2>
         <p class="section-desc" style="margin:12px auto 0">Sans frais cachés. Paiement par virement bancaire.</p>
       </div>
+      <!-- Toggle mensuel/annuel -->
+      <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-top:40px;margin-bottom:40px">
+        <span id="label-mensuel" style="font-size:14px;font-weight:600;color:#fff">Mensuel</span>
+        <div onclick="togglePricing()" style="width:52px;height:28px;background:var(--blue);border-radius:999px;cursor:pointer;position:relative;transition:background 0.2s;flex-shrink:0">
+          <div id="toggle-dot" style="width:22px;height:22px;background:white;border-radius:50%;position:absolute;top:3px;left:3px;transition:transform 0.2s;box-shadow:0 1px 4px rgba(0,0,0,0.3)"></div>
+        </div>
+        <span id="label-annuel" style="font-size:14px;font-weight:500;color:var(--slate)">Annuel <span style="background:rgba(0,229,160,0.15);color:var(--green);font-size:11px;padding:2px 8px;border-radius:999px;margin-left:4px">-15%</span></span>
+      </div>
+
       <div class="pricing-grid">
+
+        <!-- STARTER -->
         <div class="price-card">
-          <div class="price-name">Mensuel</div>
-          <div class="price-amount">400 <span style="font-size:16px;font-weight:500;color:var(--slate)">MAD</span></div>
-          <div class="price-per">par mois · sans engagement</div>
+          <div class="price-name">Starter</div>
+          <div style="font-size:11px;color:var(--blue);background:rgba(39,98,255,0.1);padding:3px 10px;border-radius:999px;display:inline-block;margin-bottom:16px">jusqu'à 150 élèves</div>
+          <div class="price-amount"><span id="price-starter">299</span> <span style="font-size:16px;font-weight:500;color:var(--slate)">MAD</span></div>
+          <div class="price-per" id="per-starter">par mois · sans engagement</div>
           <div class="price-list">
-            <div class="price-item"><div class="price-check">✓</div>Élèves &amp; enseignants illimités</div>
+            <div class="price-item"><div class="price-check">✓</div>Jusqu'à 150 élèves</div>
+            <div class="price-item"><div class="price-check">✓</div>Enseignants illimités</div>
             <div class="price-item"><div class="price-check">✓</div>Prise de présence mobile</div>
             <div class="price-item"><div class="price-check">✓</div>Alertes email automatiques</div>
             <div class="price-item"><div class="price-check">✓</div>Portail parents (FR/AR/EN)</div>
             <div class="price-item"><div class="price-check">✓</div>Rapports PDF &amp; Excel</div>
             <div class="price-item"><div class="price-check">✓</div>Assistant IA intégré</div>
-            <div class="price-item"><div class="price-check">✓</div>Multi-classes, filières, matières</div>
-            <div class="price-item"><div class="price-check">✓</div>Historique par période</div>
           </div>
           <a href="https://www.attendefy.com/auth/register" class="price-btn price-btn-border">Démarrer l'essai gratuit</a>
         </div>
+
+        <!-- GROWTH -->
         <div class="price-card featured">
-          <div class="featured-badge">ÉCONOMISEZ 800 MAD</div>
-          <div class="price-name">Annuel</div>
-          <div class="price-amount">3 000 <span style="font-size:16px;font-weight:500;color:rgba(255,255,255,0.6)">MAD</span></div>
-          <div class="price-per">par an · soit 250 MAD/mois</div>
+          <div class="featured-badge">LE PLUS POPULAIRE</div>
+          <div class="price-name">Growth</div>
+          <div style="font-size:11px;color:#7AA3FF;background:rgba(39,98,255,0.15);padding:3px 10px;border-radius:999px;display:inline-block;margin-bottom:16px">jusqu'à 350 élèves</div>
+          <div class="price-amount"><span id="price-growth">449</span> <span style="font-size:16px;font-weight:500;color:rgba(255,255,255,0.6)">MAD</span></div>
+          <div class="price-per" id="per-growth">par mois · sans engagement</div>
           <div class="price-list">
-            <div class="price-item"><div class="price-check">✓</div>Tout le plan mensuel inclus</div>
+            <div class="price-item"><div class="price-check">✓</div>Jusqu'à 350 élèves</div>
+            <div class="price-item"><div class="price-check">✓</div>Tout le plan Starter</div>
             <div class="price-item"><div class="price-check">✓</div>Onboarding personnalisé</div>
             <div class="price-item"><div class="price-check">✓</div>Formation à distance incluse</div>
             <div class="price-item"><div class="price-check">✓</div>Support prioritaire WhatsApp</div>
             <div class="price-item"><div class="price-check">✓</div>Import Excel des élèves</div>
-            <div class="price-item"><div class="price-check">✓</div>PWA installable sur mobile</div>
           </div>
-          <a href="https://www.attendefy.com/auth/register" class="price-btn price-btn-solid">Choisir l'annuel</a>
+          <a href="https://www.attendefy.com/auth/register" class="price-btn price-btn-solid">Choisir Growth</a>
         </div>
+
+        <!-- PREMIUM -->
         <div class="price-card">
-          <div class="price-name">À vie</div>
-          <div class="price-amount" style="font-size:28px">Sur devis</div>
-          <div class="price-per">licence perpétuelle · paiement unique</div>
+          <div class="price-name">Premium</div>
+          <div style="font-size:11px;color:var(--green);background:rgba(0,229,160,0.1);padding:3px 10px;border-radius:999px;display:inline-block;margin-bottom:16px">élèves illimités</div>
+          <div class="price-amount"><span id="price-premium">599</span> <span style="font-size:16px;font-weight:500;color:var(--slate)">MAD</span></div>
+          <div class="price-per" id="per-premium">par mois · sans engagement</div>
           <div class="price-list">
-            <div class="price-item"><div class="price-check">✓</div>Tout le plan annuel inclus</div>
-            <div class="price-item"><div class="price-check">✓</div>Mises à jour futures à vie</div>
-            <div class="price-item"><div class="price-check">✓</div>Aucun abonnement</div>
+            <div class="price-item"><div class="price-check">✓</div>Élèves illimités</div>
+            <div class="price-item"><div class="price-check">✓</div>Tout le plan Growth</div>
+            <div class="price-item"><div class="price-check">✓</div>Multi-établissements</div>
             <div class="price-item"><div class="price-check">✓</div>Support dédié WhatsApp</div>
-            <div class="price-item"><div class="price-check">✓</div>Idéal groupes scolaires</div>
+            <div class="price-item"><div class="price-check">✓</div>Personnalisation avancée</div>
           </div>
-          <a href="https://wa.me/212628395183?text=Bonjour%2C%20je%20suis%20int%C3%A9ress%C3%A9%20par%20la%20licence%20%C3%A0%20vie%20Attendefy." class="price-btn price-btn-wa" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:8px;">
+          <a href="https://wa.me/212628395183?text=Bonjour%2C%20je%20suis%20int%C3%A9ress%C3%A9%20par%20le%20plan%20Premium%20Attendefy." class="price-btn price-btn-wa" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:8px;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
             Nous contacter
           </a>
         </div>
       </div>
-      <p style="text-align:center;margin-top:24px;font-size:12px;color:var(--slate)">Essai gratuit 30 jours · Aucune carte bancaire · Résiliable à tout moment</p>
+      <p style="text-align:center;margin-top:24px;font-size:12px;color:var(--slate)">Essai gratuit 30 jours · Aucune carte bancaire · Adapté à l'année scolaire (10 mois)</p>
+
+      <script>
+        var isAnnuel = false;
+        var prices = { starter: 299, growth: 449, premium: 599 };
+        function togglePricing() {
+          isAnnuel = !isAnnuel;
+          var dot = document.getElementById('toggle-dot');
+          var lm  = document.getElementById('label-mensuel');
+          var la  = document.getElementById('label-annuel');
+          dot.style.transform    = isAnnuel ? 'translateX(24px)' : 'translateX(0)';
+          lm.style.color         = isAnnuel ? 'var(--slate)' : '#fff';
+          lm.style.fontWeight    = isAnnuel ? '500' : '600';
+          la.style.color         = isAnnuel ? '#fff' : 'var(--slate)';
+          la.style.fontWeight    = isAnnuel ? '600' : '500';
+          ['starter','growth','premium'].forEach(function(plan) {
+            var monthly = prices[plan];
+            var annual  = Math.round(monthly * 10 * 0.85);
+            document.getElementById('price-' + plan).textContent = isAnnuel ? annual : monthly;
+            document.getElementById('per-'   + plan).textContent = isAnnuel
+              ? 'par an · année scolaire (10 mois) · -15%'
+              : 'par mois · sans engagement';
+          });
+        }
+      </script>
     </div>
   </div>
 
