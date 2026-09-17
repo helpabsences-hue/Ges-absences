@@ -5,13 +5,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Attendefy — Gestion des absences scolaires</title>
-   <!-- Google Analytics -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-RW96QFRBLX"></script>
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
-    gtag('config', 'G-RW96QFRBLX');
+    gtag('config', 'G-XXXXXXXXXX');
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -35,7 +35,7 @@
     img{max-width:100%;display:block}
     a{color:inherit;text-decoration:none}
     .display{font-family:'Syne',sans-serif;font-weight:800;letter-spacing:-0.03em;line-height:1.05;}
-    .display-xl{font-size:clamp(32px,6vw,76px)}
+    .display-xl{font-size:clamp(42px,7.5vw,96px);line-height:1.05}
     .display-lg{font-size:clamp(24px,4vw,48px)}
 
     /* NAV */
@@ -237,7 +237,7 @@
     }
 
     @media(max-width:380px){
-      .display-xl{font-size:28px;}
+      .display-xl{font-size:34px;}
       .display-lg{font-size:22px;}
       .steps-grid{grid-template-columns:1fr;}
     }
@@ -273,12 +273,12 @@
       <span class="hero-pill-dot"></span>
       Conçu pour les établissements scolaires marocains
     </div>
-    <h1 class="display display-xl">
-      Les absences gérées.<br />
-      Les parents alertés.<br />
+    <h1 class="display display-xl" style="max-width:860px;margin:0 auto;letter-spacing:0.04em">
+      Les absences gérées.<br/>
+      Les parents alertés.<br/>
       <span style="color:#7AA3FF">En temps réel.</span>
     </h1>
-    <p class="hero-sub">Attendefy remplace les cahiers d'absences par une plateforme intelligente alertes automatiques, rapports instantanés, portail parents.</p>
+    <p class="hero-sub">Attendefy remplace les cahiers d'absences par une plateforme intelligente — alertes automatiques, rapports instantanés, portail parents.</p>
     <div class="hero-actions">
       <a href="https://www.attendefy.com/auth/register" class="btn-main">Démarrer gratuitement</a>
       <a href="#demo" class="btn-ghost">Voir la démo ↓</a>
@@ -310,7 +310,7 @@
       </div>
       <div>
         <div class="stat-val">4<span style="color:var(--blue);font-family:Inter,sans-serif;font-weight:700">rôles</span></div>
-        <div class="stat-label">Directeur · Enseignant<br/>Administrateur · Parent</div>
+        <div class="stat-label">Directeur · Administrateur<br/>Enseignant · Parent</div>
       </div>
       <div>
         <div class="stat-val">100<span style="color:var(--blue);font-family:Inter,sans-serif;font-weight:700">%</span></div>
@@ -344,7 +344,7 @@
       <div class="section-header">
         <div class="eyebrow">L'application</div>
         <h2 class="display display-lg">Simple par design</h2>
-        <p class="section-desc">Chaque interface pensée pour aller vite  pour le directeur, l'administrateur, l'enseignant, et le parent.</p>
+        <p class="section-desc">Chaque interface pensée pour aller vite — pour le directeur,l'administrateur, l'enseignant, et le parent.</p>
       </div>
       <div class="screenshots-grid">
         <div class="screenshot-card"><div class="screenshot-card-label">📊 Tableau de bord — Directeur</div><div class="screenshot-slot"><img src="screenshot-dashboard.png" alt="Dashboard"/></div></div>
@@ -428,8 +428,8 @@
         <div class="price-card">
           <div class="price-name">Starter</div>
           <div style="font-size:11px;color:var(--blue);background:rgba(39,98,255,0.1);padding:3px 10px;border-radius:999px;display:inline-block;margin-bottom:16px">jusqu'à 150 élèves</div>
-          <div class="price-amount"><span id="price-starter">299</span> <span style="font-size:16px;font-weight:500;color:var(--slate)">MAD</span></div>
-          <div class="price-per" id="per-starter">par mois</div>
+          <div class="price-amount"><span id="price-starter">200</span> <span style="font-size:16px;font-weight:500;color:var(--slate)">MAD</span></div>
+          <div class="price-per" id="per-starter">par mois · sans engagement</div>
           <div class="price-list">
             <div class="price-item"><div class="price-check">✓</div>Jusqu'à 150 élèves</div>
             <div class="price-item"><div class="price-check">✓</div>Enseignants illimités</div>
@@ -447,8 +447,8 @@
           <div class="featured-badge">LE PLUS POPULAIRE</div>
           <div class="price-name">Growth</div>
           <div style="font-size:11px;color:#7AA3FF;background:rgba(39,98,255,0.15);padding:3px 10px;border-radius:999px;display:inline-block;margin-bottom:16px">jusqu'à 350 élèves</div>
-          <div class="price-amount"><span id="price-growth">449</span> <span style="font-size:16px;font-weight:500;color:rgba(255,255,255,0.6)">MAD</span></div>
-          <div class="price-per" id="per-growth">par mois</div>
+          <div class="price-amount"><span id="price-growth">300</span> <span style="font-size:16px;font-weight:500;color:rgba(255,255,255,0.6)">MAD</span></div>
+          <div class="price-per" id="per-growth">par mois · sans engagement</div>
           <div class="price-list">
             <div class="price-item"><div class="price-check">✓</div>Jusqu'à 350 élèves</div>
             <div class="price-item"><div class="price-check">✓</div>Tout le plan Starter</div>
@@ -464,8 +464,8 @@
         <div class="price-card">
           <div class="price-name">Premium</div>
           <div style="font-size:11px;color:var(--green);background:rgba(0,229,160,0.1);padding:3px 10px;border-radius:999px;display:inline-block;margin-bottom:16px">élèves illimités</div>
-          <div class="price-amount"><span id="price-premium">599</span> <span style="font-size:16px;font-weight:500;color:var(--slate)">MAD</span></div>
-          <div class="price-per" id="per-premium">par mois</div>
+          <div class="price-amount"><span id="price-premium">400</span> <span style="font-size:16px;font-weight:500;color:var(--slate)">MAD</span></div>
+          <div class="price-per" id="per-premium">par mois · sans engagement</div>
           <div class="price-list">
             <div class="price-item"><div class="price-check">✓</div>Élèves illimités</div>
             <div class="price-item"><div class="price-check">✓</div>Tout le plan Growth</div>
@@ -483,7 +483,7 @@
 
       <script>
         var isAnnuel = false;
-        var prices = { starter: 299, growth: 449, premium: 599 };
+        var prices = { starter: 200, growth: 300, premium: 400 };
         function togglePricing() {
           isAnnuel = !isAnnuel;
           var dot = document.getElementById('toggle-dot');
