@@ -4,7 +4,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Attendefy — Gestion des absences scolaires</title>
+  <title>Attendefy — Absences, parents et paiements scolaires</title>
+  <meta name="description" content="Attendefy : import direct Massar, prise de présence mobile, alertes parents, frais de scolarité et reçus. Conçu pour les écoles privées au Maroc. Essai gratuit 30 jours." />
   <!-- Google Analytics -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
   <script>
@@ -142,6 +143,14 @@
     .testi-avatar{width:36px;height:36px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:700;font-size:14px;flex-shrink:0;}
     .testi-name{font-size:13px;font-weight:600}
     .testi-role{font-size:11px;color:var(--slate)}
+    .compare{display:flex;flex-direction:column;gap:14px}
+    .compare-topic{font-family:'Syne',sans-serif;font-size:15px;font-weight:700}
+    .compare-before,.compare-after{font-size:13px;line-height:1.6;display:flex;flex-direction:column;gap:2px}
+    .compare-before{color:var(--slate)}
+    .compare-after{color:var(--slate-2)}
+    .compare-before span,.compare-after span{font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase}
+    .compare-before span{color:var(--slate)}
+    .compare-after span{color:var(--green)}
 
     /* CTA */
     .cta-section{padding:100px 20px;text-align:center;position:relative;overflow:hidden;}
@@ -278,7 +287,7 @@
       Les parents alertés.<br/>
       <span style="color:#7AA3FF">En temps réel.</span>
     </h1>
-    <p class="hero-sub">Attendefy remplace les cahiers d'absences par une plateforme intelligente — alertes automatiques, rapports instantanés, portail parents.</p>
+    <p class="hero-sub">Attendefy remplace les cahiers d'absences et le registre des paiements par une seule plateforme : import Massar, alertes parents, reçus et rapports instantanés.</p>
     <div class="hero-actions">
       <a href="https://www.attendefy.com/auth/register" class="btn-main">Démarrer gratuitement</a>
       <a href="#demo" class="btn-ghost">Voir la démo ↓</a>
@@ -290,7 +299,7 @@
     <div class="section-inner">
       <div class="eyebrow">Démo</div>
       <h2 class="display display-lg">Voyez Attendefy en action</h2>
-      <p class="section-desc" style="margin:12px auto 0">3 minutes pour comprendre comment votre école peut fonctionner.</p>
+      <p class="section-desc" style="margin:12px auto 0">14 minutes pour comprendre comment votre école peut fonctionner.</p>
     </div>
     <div class="video-wrapper">
       <iframe width="100%" height="450" src="https://www.youtube.com/embed/wxZII60xWhc?rel=0&modestbranding=1" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
@@ -306,11 +315,11 @@
       </div>
       <div>
         <div class="stat-val">&lt;5<span style="color:var(--blue);font-family:Inter,sans-serif;font-weight:700">min</span></div>
-        <div class="stat-label">Pour configurer<br/>votre école</div>
+        <div class="stat-label">Pour importer<br/>votre liste Massar</div>
       </div>
       <div>
         <div class="stat-val">4<span style="color:var(--blue);font-family:Inter,sans-serif;font-weight:700">rôles</span></div>
-        <div class="stat-label">Directeur · Administrateur<br/>Enseignant · Parent</div>
+        <div class="stat-label">Directeur · Admin<br/>Enseignant · Parent</div>
       </div>
       <div>
         <div class="stat-val">100<span style="color:var(--blue);font-family:Inter,sans-serif;font-weight:700">%</span></div>
@@ -325,15 +334,18 @@
       <div class="section-header">
         <div class="eyebrow">Fonctionnalités</div>
         <h2 class="display display-lg">Tout ce dont votre école a besoin</h2>
-        <p class="section-desc">Une plateforme complète, pensée pour la réalité des établissements au Maroc.</p>
+        <p class="section-desc">Absences, parents et paiements au même endroit, pensé pour la réalité des écoles au Maroc.</p>
       </div>
       <div class="features-grid">
-        <div class="feat"><div class="feat-icon">📱</div><h3>Prise de présence mobile</h3><p>L'enseignant marque les présences depuis son téléphone en moins de 30 secondes.</p></div>
-        <div class="feat"><div class="feat-icon">🔔</div><h3>Alertes parents automatiques</h3><p>Dès qu'une absence est enregistrée, le parent reçoit un email. Immédiatement.</p></div>
-        <div class="feat"><div class="feat-icon">📊</div><h3>Tableau de bord temps réel</h3><p>Le directeur voit les absences du jour, les taux par classe et les alertes actives.</p></div>
-        <div class="feat"><div class="feat-icon">🤖</div><h3>Assistant IA intégré</h3><p>"Quels élèves risquent de décrocher ?" — une question, une réponse en secondes.</p></div>
-        <div class="feat"><div class="feat-icon">👨‍👩‍👧</div><h3>Portail parents</h3><p>Chaque parent accède à l'espace de son enfant. En français ou en arabe.</p></div>
-        <div class="feat"><div class="feat-icon">📄</div><h3>Rapports PDF & Excel</h3><p>Générez les rapports d'absences en un clic pour les conseils de classe.</p></div>
+        <div class="feat"><div class="feat-icon">📥</div><h3>Import direct depuis Massar</h3><p>Importez la liste exportée de Massar telle quelle. Les classes sont créées automatiquement, avec la date de naissance de chaque élève.</p></div>
+        <div class="feat"><div class="feat-icon">📱</div><h3>Prise de présence mobile</h3><p>L'enseignant marque les présences et les retards depuis son téléphone en moins de 30 secondes.</p></div>
+        <div class="feat"><div class="feat-icon">🔔</div><h3>Alertes parents automatiques</h3><p>Le parent reçoit un email dès que le seuil d'absences fixé par l'école est atteint.</p></div>
+        <div class="feat"><div class="feat-icon">🔗</div><h3>Inscription des parents par lien</h3><p>Partagez un lien sur WhatsApp. Le parent s'inscrit avec le code Massar et la date de naissance, et ajoute tous ses enfants au même compte.</p></div>
+        <div class="feat"><div class="feat-icon">💰</div><h3>Frais de scolarité et reçus</h3><p>Inscription, mensualités ou paiement annuel. Un reçu imprimable en un clic, en français ou en arabe.</p></div>
+        <div class="feat"><div class="feat-icon">⏰</div><h3>Impayés et rappels WhatsApp</h3><p>Les mois impayés de chaque élève, avec un message de rappel prêt à envoyer au parent.</p></div>
+        <div class="feat"><div class="feat-icon">📊</div><h3>Tableau de bord et rapports</h3><p>Absences du jour, taux par classe, exports PDF et Excel en un clic pour les conseils de classe.</p></div>
+        <div class="feat"><div class="feat-icon">🤖</div><h3>Assistant IA intégré</h3><p>« Quels élèves risquent de décrocher ? » « Qui n'a pas payé octobre ? » Une question, une réponse en secondes.</p></div>
+        <div class="feat"><div class="feat-icon">👨‍👩‍👧</div><h3>Portail parents</h3><p>Absences, paiements et reçus de chaque enfant, en français, en arabe ou en anglais.</p></div>
       </div>
     </div>
   </section>
@@ -344,7 +356,7 @@
       <div class="section-header">
         <div class="eyebrow">L'application</div>
         <h2 class="display display-lg">Simple par design</h2>
-        <p class="section-desc">Chaque interface pensée pour aller vite — pour le directeur,l'administrateur, l'enseignant, et le parent.</p>
+        <p class="section-desc">Chaque interface pensée pour aller vite — pour le directeur, l'enseignant, et le parent.</p>
       </div>
       <div class="screenshots-grid">
         <div class="screenshot-card"><div class="screenshot-card-label">📊 Tableau de bord — Directeur</div><div class="screenshot-slot"><img src="screenshot-dashboard.png" alt="Dashboard"/></div></div>
@@ -364,9 +376,9 @@
       </div>
       <div class="steps-grid">
         <div class="step"><div class="step-num">1</div><h4>Créez votre école</h4><p>Inscription en 2 minutes. Essai gratuit 30 jours, aucune carte bancaire.</p></div>
-        <div class="step"><div class="step-num">2</div><h4>Importez vos données</h4><p>Ajoutez vos classes, matières, enseignants et élèves.</p></div>
-        <div class="step"><div class="step-num">3</div><h4>Invitez votre équipe</h4><p>Les enseignants reçoivent un email d'invitation en 1 minute.</p></div>
-        <div class="step"><div class="step-num">4</div><h4>Gérez en temps réel</h4><p>Absences enregistrées, parents alertés, rapports automatiques.</p></div>
+        <div class="step"><div class="step-num">2</div><h4>Importez votre liste Massar</h4><p>Le fichier exporté de Massar, tel quel. Classes et élèves prêts en quelques secondes.</p></div>
+        <div class="step"><div class="step-num">3</div><h4>Invitez enseignants et parents</h4><p>Les enseignants reçoivent un email. Les parents s'inscrivent via un lien partagé sur WhatsApp.</p></div>
+        <div class="step"><div class="step-num">4</div><h4>Gérez au quotidien</h4><p>Absences, alertes, paiements et reçus au même endroit.</p></div>
       </div>
     </div>
   </section>
@@ -433,8 +445,10 @@
           <div class="price-list">
             <div class="price-item"><div class="price-check">✓</div>Jusqu'à 150 élèves</div>
             <div class="price-item"><div class="price-check">✓</div>Enseignants illimités</div>
+            <div class="price-item"><div class="price-check">✓</div>Import direct Massar</div>
             <div class="price-item"><div class="price-check">✓</div>Prise de présence mobile</div>
-            <div class="price-item"><div class="price-check">✓</div>Alertes email automatiques</div>
+            <div class="price-item"><div class="price-check">✓</div>Alertes email aux parents</div>
+            <div class="price-item"><div class="price-check">✓</div>Paiements, reçus et impayés</div>
             <div class="price-item"><div class="price-check">✓</div>Portail parents (FR/AR/EN)</div>
             <div class="price-item"><div class="price-check">✓</div>Rapports PDF &amp; Excel</div>
             <div class="price-item"><div class="price-check">✓</div>Assistant IA intégré</div>
@@ -455,7 +469,6 @@
             <div class="price-item"><div class="price-check">✓</div>Onboarding personnalisé</div>
             <div class="price-item"><div class="price-check">✓</div>Formation à distance incluse</div>
             <div class="price-item"><div class="price-check">✓</div>Support prioritaire WhatsApp</div>
-            <div class="price-item"><div class="price-check">✓</div>Import Excel des élèves</div>
           </div>
           <a href="https://www.attendefy.com/auth/register" class="price-btn price-btn-solid">Choisir Growth</a>
         </div>
@@ -469,9 +482,8 @@
           <div class="price-list">
             <div class="price-item"><div class="price-check">✓</div>Élèves illimités</div>
             <div class="price-item"><div class="price-check">✓</div>Tout le plan Growth</div>
-            <div class="price-item"><div class="price-check">✓</div>Multi-établissements</div>
             <div class="price-item"><div class="price-check">✓</div>Support dédié WhatsApp</div>
-            <div class="price-item"><div class="price-check">✓</div>Personnalisation avancée</div>
+            <div class="price-item"><div class="price-check">✓</div>Accompagnement à chaque rentrée (import Massar et réglages)</div>
           </div>
           <a href="https://wa.me/212628395183?text=Bonjour%2C%20je%20suis%20int%C3%A9ress%C3%A9%20par%20le%20plan%20Premium%20Attendefy." class="price-btn price-btn-wa" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:8px;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
@@ -507,17 +519,29 @@
     </div>
   </div>
 
-  <!-- TESTIMONIALS -->
+  <!-- BEFORE / AFTER -->
   <section class="section">
     <div class="section-inner">
       <div class="section-header">
-        <div class="eyebrow">Témoignages</div>
-        <h2 class="display display-lg">Ce que disent nos utilisateurs</h2>
+        <div class="eyebrow">Pourquoi Attendefy</div>
+        <h2 class="display display-lg">Ce qui change dans votre école</h2>
       </div>
       <div class="testimonials-grid">
-        <div class="testi"><div class="testi-stars">★★★★★</div><p class="testi-text">"Avant Attendefy, je passais 2h par semaine à compiler les absences. Maintenant tout est automatique."</p><div class="testi-author"><div class="testi-avatar">M</div><div><div class="testi-name">Mohamed L.</div><div class="testi-role">Directeur — Casablanca</div></div></div></div>
-        <div class="testi"><div class="testi-stars">★★★★★</div><p class="testi-text">"L'app mobile est très simple. Je marque les absences pendant le cours, le directeur voit tout en temps réel."</p><div class="testi-author"><div class="testi-avatar">S</div><div><div class="testi-name">Sanaa R.</div><div class="testi-role">Professeure — Rabat</div></div></div></div>
-        <div class="testi"><div class="testi-stars">★★★★★</div><p class="testi-text">"L'assistant IA m'a identifié 5 élèves à risque que je n'avais pas remarqués. On a pu intervenir à temps."</p><div class="testi-author"><div class="testi-avatar">K</div><div><div class="testi-name">Khalid M.</div><div class="testi-role">Directeur pédagogique — Marrakech</div></div></div></div>
+        <div class="testi compare">
+          <div class="compare-topic">Absences</div>
+          <p class="compare-before"><span>Avant</span>Les cahiers d'appel sont compilés à la main en fin de semaine.</p>
+          <p class="compare-after"><span>Avec Attendefy</span>Les absences arrivent en direct depuis le téléphone de l'enseignant.</p>
+        </div>
+        <div class="testi compare">
+          <div class="compare-topic">Parents</div>
+          <p class="compare-before"><span>Avant</span>L'administration appelle les familles une par une.</p>
+          <p class="compare-after"><span>Avec Attendefy</span>Le parent est alerté par email et suit son enfant depuis son espace.</p>
+        </div>
+        <div class="testi compare">
+          <div class="compare-topic">Paiements</div>
+          <p class="compare-before"><span>Avant</span>Un registre papier, et des impayés découverts trop tard.</p>
+          <p class="compare-after"><span>Avec Attendefy</span>La liste des impayés à jour, et un reçu imprimé en un clic.</p>
+        </div>
       </div>
     </div>
   </section>
@@ -526,7 +550,7 @@
   <section class="cta-section">
     <div class="cta-glow"></div>
     <h2 class="display display-lg">Prêt à moderniser votre école ?</h2>
-    <p>Rejoignez les établissements qui ont transformé leur gestion des absences avec Attendefy.</p>
+    <p>Testez Attendefy 30 jours avec vos propres classes. Nous vous aidons à importer votre liste Massar.</p>
     <div class="hero-actions">
       <a href="https://www.attendefy.com/auth/register" class="btn-main">Commencer l'essai gratuit</a>
       <a href="https://wa.me/212628395183?text=Bonjour%2C%20je%20suis%20int%C3%A9ress%C3%A9%20par%20Attendefy%20pour%20mon%20%C3%A9tablissement." class="btn-whatsapp" target="_blank">
@@ -550,7 +574,7 @@
       <a href="https://wa.me/212628395183" target="_blank">WhatsApp</a>
       <a href="https://www.attendefy.com/auth/register">S'inscrire</a>
     </div>
-    <div class="footer-copy">© 2026 Attendefy — Gestion des absences scolaires au Maroc</div>
+    <div class="footer-copy">© 2026 Attendefy — Absences et paiements scolaires au Maroc</div>
   </footer>
 
 </body>

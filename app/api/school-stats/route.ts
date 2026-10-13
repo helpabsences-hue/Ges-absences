@@ -31,15 +31,12 @@ export async function GET() {
       admin.from('profiles').select('name, email').eq('school_id', s.id).eq('role', 'super_admin').limit(1).maybeSingle(),
     ])
 
-    const { data: studentIds } = await admin.from('students').select('id').eq('school_id', s.id)
-    let attendanceCount = 0
+    // Count through the students join — a long list of ids in the URL breaks for big schools
+    const { count: attCount } = await admin.from('attendance')
+      .select('student_id, students!inner(school_id)', { count: 'exact', head: true })
+      .eq('students.school_id', s.id)
+    const attendanceCount = attCount ?? 0
     let sessionCount = 0
-
-    if (studentIds && studentIds.length > 0) {
-      const sIds = studentIds.map((st: any) => st.id)
-      const { count: attCount } = await admin.from('attendance').select('*', { count: 'exact', head: true }).in('student_id', sIds)
-      attendanceCount = attCount ?? 0
-    }
 
     const { data: plannings } = await admin.from('teacher_planning').select('id').eq('school_id', s.id)
     if (plannings && plannings.length > 0) {

@@ -24,26 +24,25 @@ export async function POST(request: NextRequest) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
-  // 1. Get all user IDs belonging to this school
+  // 1. Remember the accounts of this school (profiles are removed with the school)
   const { data: profiles } = await admin
     .from('profiles')
-    .select('id')
+    .select('id, role')
     .eq('school_id', school_id)
+  const userIds = (profiles ?? []).filter((p: any) => p.role !== 'platform_admin').map((p: any) => p.id)
 
-  // 2. Delete all auth users
-  if (profiles && profiles.length > 0) {
-    await Promise.all(
-      profiles.map((p: any) => admin.auth.admin.deleteUser(p.id))
-    )
+  // 2. Delete the school first (CASCADE removes students, absences, payments, profiles…)
+  //    If this fails, nothing else is touched.
+  const { error } = await admin.from('schools').delete().eq('id', school_id)
+  if (error) {
+    console.error('delete-school error:', error.message)
+    return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  // 3. Delete school (CASCADE handles all related data)
-  const { error } = await admin
-    .from('schools')
-    .delete()
-    .eq('id', school_id)
+  // 3. Then delete the login accounts
+  const results = await Promise.all(userIds.map((id: string) => admin.auth.admin.deleteUser(id)))
+  const failed  = results.filter(r => r.error).length
+  if (failed > 0) console.error(`delete-school: ${failed} account(s) not deleted`)
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
-  return NextResponse.json({ success: true })
+  return NextResponse.json({ success: true, accountsDeleted: userIds.length - failed, accountsFailed: failed })
 }

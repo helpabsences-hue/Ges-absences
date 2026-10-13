@@ -96,7 +96,7 @@ export default function PaymentsPage() {
   if (!profile) return null
 
   return (
-    <div className="max-w-7xl mx-auto space-y-5" dir={isRtl ? 'rtl' : 'ltr'}>
+    <div className="max-w-6xl mx-auto space-y-5" dir={isRtl ? 'rtl' : 'ltr'}>
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">

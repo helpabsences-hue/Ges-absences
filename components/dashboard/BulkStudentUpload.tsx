@@ -344,10 +344,6 @@ export default function BulkStudentUpload() {
         <p className="text-xs text-slate-400 leading-relaxed">
           <span className="text-blue-400 font-medium">Fichier Massar</span> (لائحة التلاميذ) tel quel — une feuille par classe, les classes manquantes sont créées.
         </p>
-        <p className="text-xs text-slate-500 mt-1.5">Ou un fichier simple :</p>
-        <code className="text-xs text-slate-400 block leading-relaxed">
-          name | massar_code | group_name | parent_name | parent_phone | parent_email
-        </code>
       </div>
     </div>
   )
