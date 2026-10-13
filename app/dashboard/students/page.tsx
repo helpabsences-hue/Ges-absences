@@ -1,543 +1,3 @@
-// 'use client'
-// import { toast } from 'sonner'
-
-// export const dynamic = 'force-dynamic'
-// // app/dashboard/students/page.tsx
-
-// import { useEffect, useState } from 'react'
-// import { useStudentStore } from '@/stores/useStudentStore'
-// import { useGroupStore } from '@/stores/useGroupStore'
-// import { useSettingsStore } from '@/stores/useSettingsStore'
-// import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
-// import type { StudentWithGroup, AddStudentPayload } from '@/types'
-// import BulkStudentUpload from '@/components/dashboard/BulkStudentUpload'
-
-// type Lang = 'fr' | 'en' | 'ar'
-
-// const UI: Record<Lang, {
-//   title: string; subtitle: string; subtitleOne: string
-//   importCsv: string; addStudent: string
-//   importTitle: string; importDesc: string
-//   editStudent: string; newStudent: string
-//   fullName: string; fullNamePlaceholder: string
-//   massarCode: string; massarPlaceholder: string
-//   group: string; selectGroup: string; year: string
-//   errName: string; errMassar: string; errGroup: string
-//   saving: string; update: string; add: string; cancel: string
-//   searchPlaceholder: string; allGroups: string; clearFilters: string
-//   colName: string; colMassar: string; colGroup: string
-//   unassigned: string; noMatch: string; noStudents: string
-//   noStudentsHint: string; showing: string; of: string
-//   confirmDelete: string
-//   confirmBulk: string; confirmBulkMsg: string
-//   cancelLabel: string; deleteLabel: string
-// }> = {
-//   fr: {
-//     title: 'Étudiants', subtitle: ' étudiants inscrits', subtitleOne: ' étudiant inscrit',
-//     importCsv: 'Importer CSV', addStudent: 'Ajouter un Étudiant',
-//     importTitle: 'Importer des Étudiants via CSV', importDesc: 'Ajout en masse depuis un export tableur',
-//     editStudent: 'Modifier l\'Étudiant', newStudent: 'Nouvel Étudiant',
-//     fullName: 'Nom complet', fullNamePlaceholder: 'Nom complet de l\'étudiant',
-//     massarCode: 'Code Massar', massarPlaceholder: 'ex. G123456789',
-//     group: 'Groupe', selectGroup: 'Choisir un groupe', year: 'Année',
-//     errName: 'Le nom est obligatoire.', errMassar: 'Le code Massar est obligatoire.', errGroup: 'Veuillez choisir un groupe.',
-//     saving: 'Enregistrement…', update: 'Modifier', add: 'Ajouter', cancel: 'Annuler',
-//     searchPlaceholder: 'Rechercher nom ou Massar…', allGroups: 'Tous les groupes', clearFilters: 'Effacer les filtres',
-//     colName: 'Nom', colMassar: 'Code Massar', colGroup: 'Groupe',
-//     unassigned: 'Non assigné', noMatch: 'Aucun étudiant ne correspond', noStudents: 'Aucun étudiant pour le moment',
-//     noStudentsHint: 'Ajoutez manuellement ou importez un fichier CSV',
-//     showing: 'Affichage de', of: 'sur',
-//     confirmDelete: 'Supprimer cet étudiant ?',
-//     confirmBulk: 'Supprimer les étudiants', confirmBulkMsg: 'Cette action est irréversible.',
-//     cancelLabel: 'Annuler', deleteLabel: 'Supprimer',
-//   },
-//   en: {
-//     title: 'Students', subtitle: ' students registered', subtitleOne: ' student registered',
-//     importCsv: 'Import CSV', addStudent: 'Add Student',
-//     importTitle: 'Import Students via CSV', importDesc: 'Bulk-add students from a spreadsheet export',
-//     editStudent: 'Edit Student', newStudent: 'New Student',
-//     fullName: 'Full name', fullNamePlaceholder: 'Student full name',
-//     massarCode: 'Massar code', massarPlaceholder: 'e.g. G123456789',
-//     group: 'Group', selectGroup: 'Select group', year: 'Year',
-//     errName: 'Name is required.', errMassar: 'Massar code is required.', errGroup: 'Please select a group.',
-//     saving: 'Saving…', update: 'Update Student', add: 'Add Student', cancel: 'Cancel',
-//     searchPlaceholder: 'Search name or Massar…', allGroups: 'All groups', clearFilters: 'Clear filters',
-//     colName: 'Name', colMassar: 'Massar Code', colGroup: 'Group',
-//     unassigned: 'Unassigned', noMatch: 'No students match your filters', noStudents: 'No students yet',
-//     noStudentsHint: 'Add one manually or import a CSV file',
-//     showing: 'Showing', of: 'of',
-//     confirmDelete: 'Delete this student?',
-//     confirmBulk: 'Delete students', confirmBulkMsg: 'This action cannot be undone.',
-//     cancelLabel: 'Cancel', deleteLabel: 'Delete',
-//   },
-//   ar: {
-//     title: 'الطلاب', subtitle: ' طالب مسجل', subtitleOne: ' طالب مسجل',
-//     importCsv: 'استيراد CSV', addStudent: 'إضافة طالب',
-//     importTitle: 'استيراد الطلاب عبر CSV', importDesc: 'إضافة جماعية من ملف جدول بيانات',
-//     editStudent: 'تعديل الطالب', newStudent: 'طالب جديد',
-//     fullName: 'الاسم الكامل', fullNamePlaceholder: 'الاسم الكامل للطالب',
-//     massarCode: 'رمز مسار', massarPlaceholder: 'مثال: G123456789',
-//     group: 'الفصل', selectGroup: 'اختر الفصل', year: 'السنة',
-//     errName: 'الاسم مطلوب.', errMassar: 'رمز مسار مطلوب.', errGroup: 'الرجاء اختيار فصل.',
-//     saving: 'جارٍ الحفظ…', update: 'تعديل', add: 'إضافة', cancel: 'إلغاء',
-//     searchPlaceholder: 'البحث بالاسم أو رمز مسار…', allGroups: 'جميع الفصول', clearFilters: 'مسح الفلاتر',
-//     colName: 'الاسم', colMassar: 'رمز مسار', colGroup: 'الفصل',
-//     unassigned: 'غير مسند', noMatch: 'لا يوجد طالب يطابق الفلتر', noStudents: 'لا يوجد طلاب بعد',
-//     noStudentsHint: 'أضف يدوياً أو استورد ملف CSV',
-//     showing: 'عرض', of: 'من',
-//     confirmDelete: 'حذف هذا الطالب؟',
-//     confirmBulk: 'حذف الطلاب', confirmBulkMsg: 'هذا الإجراء لا يمكن التراجع عنه.',
-//     cancelLabel: 'إلغاء', deleteLabel: 'حذف',
-//   },
-// }
-
-// const EMPTY: AddStudentPayload = { name: '', massar_code: '', group_id: '', parent_name: '', parent_email: '', parent_phone: '' }
-
-// export default function StudentsPage() {
-//   const { students, loading, error, fetchStudents, addStudent, updateStudent, deleteStudent } = useStudentStore()
-//   const { groups, fetchGroups } = useGroupStore()
-//   const { language } = useSettingsStore()
-//   const lang = (language || 'fr') as Lang
-//   const ui = UI[lang]
-//   const isRtl = lang === 'ar'
-
-//   const [showForm, setShowForm] = useState(false)
-//   const [showUpload, setShowUpload] = useState(false)
-//   const [form, setForm] = useState<AddStudentPayload>(EMPTY)
-//   const [saving, setSaving] = useState(false)
-//   const [editId, setEditId] = useState<string | null>(null)
-//   const [formError, setFormError] = useState('')
-//   const [search, setSearch] = useState('')
-//   const [filterGroup, setFilterGroup] = useState('')
-//   const [selected, setSelected] = useState<Set<string>>(new Set())
-//   const [deleting, setDeleting] = useState(false)
-//   const [confirmOpen, setConfirmOpen] = useState(false)
-
-//   useEffect(() => { fetchStudents(); fetchGroups() }, [fetchStudents, fetchGroups])
-
-//   const openAdd = () => { setShowUpload(false); setEditId(null); setForm(EMPTY); setFormError(''); setShowForm(true) }
-//   const openEdit = (s: StudentWithGroup) => {
-//     setShowUpload(false); setEditId(s.id)
-//     setForm({ name: s.name, massar_code: s.massar_code, group_id: s.group_id ?? '', parent_name: (s as any).parent_name ?? '', parent_email: (s as any).parent_email ?? '', parent_phone: (s as any).parent_phone ?? '' })
-//     setFormError(''); setShowForm(true)
-//   }
-//   const handleCancel = () => { setShowForm(false); setEditId(null); setForm(EMPTY); setFormError('') }
-
-//   const toggleSelect = (id: string) => {
-//     setSelected(prev => {
-//       const next = new Set(prev)
-//       next.has(id) ? next.delete(id) : next.add(id)
-//       return next
-//     })
-//   }
-
-//   const toggleSelectAll = (ids: string[]) => {
-//     if (ids.every(id => selected.has(id))) {
-//       setSelected(new Set())
-//     } else {
-//       setSelected(new Set(ids))
-//     }
-//   }
-
-//   const handleBulkDelete = async () => {
-//     setDeleting(true)
-//     for (const id of selected) await deleteStudent(id)
-//     setSelected(new Set()); setDeleting(false); setConfirmOpen(false)
-//   }
-
-//   const handleSubmit = async (e: React.FormEvent) => {
-//     e.preventDefault()
-//     if (!form.name.trim()) { setFormError(ui.errName); return }
-//     if (!form.massar_code.trim()) { setFormError(ui.errMassar); return }
-//     if (!form.group_id) { setFormError(ui.errGroup); return }
-//     if (!form.parent_phone?.trim()) { setFormError(lang === 'ar' ? 'رقم هاتف ولي الأمر مطلوب' : lang === 'fr' ? 'Le téléphone du parent est obligatoire' : 'Parent phone is required'); return }
-//     setSaving(true); setFormError('')
-
-//     if (editId) {
-//       await updateStudent(editId, form)
-//     } else {
-//       const id = await addStudent(form)
-//       if (!id) { setSaving(false); return }
-
-//       // Parent invitation is now handled manually from the Invitations page
-//       // No auto-send to avoid Brevo rate limits
-//     }
-
-//     setSaving(false); handleCancel()
-//   }
-
-//   const handleDelete = async (id: string) => {
-//     await deleteStudent(id)
-//   }
-
-//   const filtered = students.filter((s) => {
-//     const matchSearch = s.name.toLowerCase().includes(search.toLowerCase()) ||
-//       s.massar_code.toLowerCase().includes(search.toLowerCase())
-//     return matchSearch && (filterGroup ? s.group_id === filterGroup : true)
-//   })
-
-//   const inputCls = `w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm
-//     text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition
-//     ${isRtl ? 'text-right' : ''}`
-
-//   return (
-//     <div className={`max-w-6xl mx-auto space-y-4 sm:space-y-6 ${isRtl ? 'text-right' : ''}`}>
-
-//       {/* ── Header ─────────────────────────────────────── */}
-//       <div className={`flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-0 sm:justify-between
-//         ${isRtl ? 'sm:flex-row-reverse' : ''}`}>
-//         <div>
-//           <h2 className="text-lg sm:text-xl font-semibold text-white">{ui.title}</h2>
-//           <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
-//             {students.length}{students.length !== 1 ? ui.subtitle : ui.subtitleOne}
-//           </p>
-//         </div>
-//         <div className={`flex items-center gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
-//           {/* Import CSV */}
-//           <button onClick={() => { setShowUpload(v => !v); setShowForm(false) }}
-//             className={`flex items-center gap-2 text-sm font-medium px-3 sm:px-4 py-2.5 rounded-xl border transition-all
-//               ${isRtl ? 'flex-row-reverse' : ''}
-//               ${showUpload
-//                 ? 'bg-slate-700 border-slate-600 text-white'
-//                 : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'}`}>
-//             <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-//               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-//                 d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-//             </svg>
-//             <span className="hidden sm:inline">{ui.importCsv}</span>
-//           </button>
-//           {/* Add */}
-//           <button onClick={openAdd}
-//             className={`flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium
-//               px-3 sm:px-4 py-2.5 rounded-xl transition-all ${isRtl ? 'flex-row-reverse' : ''}`}>
-//             <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-//               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-//             </svg>
-//             <span className="hidden sm:inline">{ui.addStudent}</span>
-//           </button>
-//         </div>
-//       </div>
-
-//       {/* ── CSV Upload panel ───────────────────────────── */}
-//       {showUpload && (
-//         <div className="bg-slate-900 border border-slate-700 rounded-2xl p-4 sm:p-5">
-//           <div className={`flex items-center justify-between mb-4 ${isRtl ? 'flex-row-reverse' : ''}`}>
-//             <div className={isRtl ? 'text-right' : ''}>
-//               <h3 className="text-sm font-semibold text-white">{ui.importTitle}</h3>
-//               <p className="text-xs text-slate-500 mt-0.5">{ui.importDesc}</p>
-//             </div>
-//             <button onClick={() => setShowUpload(false)}
-//               className="text-slate-500 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition shrink-0">
-//               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-//                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-//               </svg>
-//             </button>
-//           </div>
-//           <BulkStudentUpload />
-//         </div>
-//       )}
-
-//       {/* ── Add / Edit form ────────────────────────────── */}
-//       {showForm && (
-//         <div className="bg-slate-900 border border-slate-700 rounded-2xl p-4 sm:p-5">
-//           <h3 className="text-sm font-semibold text-white mb-4">
-//             {editId ? ui.editStudent : ui.newStudent}
-//           </h3>
-//           <form onSubmit={handleSubmit} className="space-y-4">
-
-//             {/* ── Student info ── */}
-//             <div>
-//               <p className={`text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 ${isRtl ? 'text-right' : ''}`}>
-//                 {lang === 'ar' ? 'معلومات الطالب' : lang === 'fr' ? 'Informations étudiant' : 'Student info'}
-//               </p>
-//               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-//                 <div>
-//                   <label className={`block text-xs font-medium text-slate-400 mb-1.5 ${isRtl ? 'text-right' : ''}`}>
-//                     {ui.fullName} <span className="text-red-400">*</span>
-//                   </label>
-//                   <input type="text" value={form.name}
-//                     onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-//                     placeholder={ui.fullNamePlaceholder} className={inputCls} />
-//                 </div>
-//                 <div>
-//                   <label className={`block text-xs font-medium text-slate-400 mb-1.5 ${isRtl ? 'text-right' : ''}`}>
-//                     {ui.massarCode} <span className="text-red-400">*</span>
-//                   </label>
-//                   <input type="text" value={form.massar_code}
-//                     onChange={e => setForm(f => ({ ...f, massar_code: e.target.value.toUpperCase() }))}
-//                     placeholder={ui.massarPlaceholder}
-//                     className={`${inputCls} font-mono`} />
-//                 </div>
-//                 <div>
-//                   <label className={`block text-xs font-medium text-slate-400 mb-1.5 ${isRtl ? 'text-right' : ''}`}>
-//                     {ui.group} <span className="text-red-400">*</span>
-//                   </label>
-//                   <select value={form.group_id}
-//                     onChange={e => setForm(f => ({ ...f, group_id: e.target.value }))}
-//                     className={inputCls}>
-//                     <option value="">{ui.selectGroup}</option>
-//                     {groups.map(g => (
-//                       <option key={g.id} value={g.id}>{g.name} ({ui.year} {g.year})</option>
-//                     ))}
-//                   </select>
-//                 </div>
-//               </div>
-//             </div>
-
-//             {/* ── Parent info ── */}
-//             <div>
-//               <p className={`text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 ${isRtl ? 'text-right' : ''}`}>
-//                 {lang === 'ar' ? 'معلومات ولي الأمر' : lang === 'fr' ? 'Informations parent' : 'Parent info'}
-//               </p>
-//               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-//                 <div>
-//                   <label className={`block text-xs font-medium text-slate-400 mb-1.5 ${isRtl ? 'text-right' : ''}`}>
-//                     {lang === 'ar' ? 'اسم ولي الأمر' : lang === 'fr' ? 'Nom du parent' : 'Parent name'}
-//                   </label>
-//                   <input type="text" value={form.parent_name ?? ''}
-//                     onChange={e => setForm(f => ({ ...f, parent_name: e.target.value }))}
-//                     placeholder={lang === 'ar' ? 'محمد العمراني' : lang === 'fr' ? 'Mohamed Amrani' : 'Mohamed Amrani'}
-//                     className={inputCls} />
-//                 </div>
-//                 <div>
-//                   <label className={`block text-xs font-medium text-slate-400 mb-1.5 ${isRtl ? 'text-right' : ''}`}>
-//                     {lang === 'ar' ? 'هاتف ولي الأمر' : lang === 'fr' ? 'Téléphone parent' : 'Parent phone'}{' '}
-//                     <span className="text-red-400">*</span>
-//                   </label>
-//                   <input type="tel" value={form.parent_phone ?? ''}
-//                     onChange={e => setForm(f => ({ ...f, parent_phone: e.target.value }))}
-//                     placeholder="+212 6XX XXX XXX"
-//                     className={inputCls} />
-//                 </div>
-//                 <div>
-//                   <label className={`block text-xs font-medium text-slate-400 mb-1.5 ${isRtl ? 'text-right' : ''}`}>
-//                     {lang === 'ar' ? 'بريد ولي الأمر' : lang === 'fr' ? 'Email parent' : 'Parent email'}{' '}
-//                     <span className="text-slate-600 text-[10px]">{lang === 'fr' ? '(optionnel)' : lang === 'ar' ? '(اختياري)' : '(optional)'}</span>
-//                   </label>
-//                   <input type="email" value={form.parent_email ?? ''}
-//                     onChange={e => setForm(f => ({ ...f, parent_email: e.target.value }))}
-//                     placeholder={lang === 'ar' ? 'parent@email.com' : 'parent@email.com'}
-//                     className={inputCls} />
-//                 </div>
-//               </div>
-//               <p className={`text-[11px] text-amber-400/80 mt-2 ${isRtl ? 'text-right' : ''}`}>
-//                 ⚠️ {lang === 'ar' ? 'سيُرسل بريد تنبيه تلقائياً إلى ولي الأمر عند تجاوز حد الغيابات المحدد.'
-//                   : lang === 'fr' ? "Un email d'alerte sera envoyé automatiquement au parent quand le seuil d'absences est atteint."
-//                     : 'An alert email will be sent automatically to the parent when the absence threshold is reached.'}
-//               </p>
-//             </div>
-
-//             {formError && <p className="text-xs text-red-400">{formError}</p>}
-
-//             <div className={`flex gap-3 pt-1 ${isRtl ? 'flex-row-reverse' : ''}`}>
-//               <button type="submit" disabled={saving}
-//                 className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-medium px-5 py-2 rounded-xl transition">
-//                 {saving ? ui.saving : editId ? ui.update : ui.add}
-//               </button>
-//               <button type="button" onClick={handleCancel}
-//                 className="text-slate-400 hover:text-white text-sm px-4 py-2 rounded-xl hover:bg-slate-800 transition">
-//                 {ui.cancel}
-//               </button>
-//             </div>
-//           </form>
-//         </div>
-//       )}
-
-//       {/* Error */}
-//       {error && (
-//         <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-red-400 text-sm">{error}</div>
-//       )}
-
-//       {/* ── Filters ────────────────────────────────────── */}
-//       <div className={`flex flex-wrap gap-2 sm:gap-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
-//         <div className="relative">
-//           <svg className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500
-//             ${isRtl ? 'right-3' : 'left-3'}`}
-//             fill="none" stroke="currentColor" viewBox="0 0 24 24">
-//             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-//               d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-//           </svg>
-//           <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
-//             placeholder={ui.searchPlaceholder}
-//             className={`bg-slate-900 border border-slate-800 rounded-xl py-2.5 text-sm text-white
-//               placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition
-//               w-48 sm:w-64 ${isRtl ? 'pr-9 pl-3 text-right' : 'pl-9 pr-3'}`} />
-//         </div>
-//         <select value={filterGroup} onChange={(e) => setFilterGroup(e.target.value)}
-//           className={`bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white
-//             focus:outline-none focus:ring-2 focus:ring-blue-500 transition ${isRtl ? 'text-right' : ''}`}>
-//           <option value="">{ui.allGroups}</option>
-//           {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-//         </select>
-//         {(search || filterGroup) && (
-//           <button onClick={() => { setSearch(''); setFilterGroup('') }}
-//             className="text-xs text-slate-500 hover:text-white px-3 py-2 rounded-xl hover:bg-slate-800 transition">
-//             {ui.clearFilters}
-//           </button>
-//         )}
-//       </div>
-
-//       {/* ── Bulk delete bar ────────────────────────────── */}
-//       {selected.size > 0 && (
-//         <div className="bg-blue-600/10 border border-blue-500/30 rounded-xl px-4 py-3 flex flex-wrap items-center justify-between gap-3">
-//           <p className="text-sm font-medium text-blue-400">
-//             {selected.size} étudiant{selected.size > 1 ? 's' : ''} sélectionné{selected.size > 1 ? 's' : ''}
-//           </p>
-//           <div className="flex items-center gap-2">
-//             <button onClick={() => setSelected(new Set())}
-//               className="text-xs text-slate-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-slate-800 transition">
-//               {ui.cancelLabel}
-//             </button>
-//             <button onClick={() => setConfirmOpen(true)} disabled={deleting}
-//               className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white transition disabled:opacity-50 flex items-center gap-1.5">
-//               {deleting ? (
-//                 <><svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
-//                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-//                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-//                 </svg>{ui.deleteLabel}…</>
-//               ) : `🗑 ${ui.deleteLabel} (${selected.size})`}
-//             </button>
-//           </div>
-//         </div>
-//       )}
-
-//       {/* ── Table ──────────────────────────────────────── */}
-//       <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
-//         {loading ? (
-//           <div className="flex items-center justify-center py-16">
-//             <svg className="w-6 h-6 text-blue-400 animate-spin" fill="none" viewBox="0 0 24 24">
-//               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-//               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-//             </svg>
-//           </div>
-//         ) : filtered.length === 0 ? (
-//           <div className="py-16 text-center">
-//             <div className="w-12 h-12 bg-slate-800 rounded-xl flex items-center justify-center mx-auto mb-3">
-//               <svg className="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-//                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-//                   d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-//               </svg>
-//             </div>
-//             <p className="text-slate-400 font-medium">
-//               {search || filterGroup ? ui.noMatch : ui.noStudents}
-//             </p>
-//             {!search && !filterGroup && (
-//               <p className="text-slate-600 text-sm mt-1">{ui.noStudentsHint}</p>
-//             )}
-//           </div>
-//         ) : (
-//           <div className="overflow-x-auto">
-//             <table className="w-full">
-//               <thead>
-//                 <tr className="border-b border-slate-800">
-//                   {/* Select all checkbox */}
-//                   <th className="px-4 py-3 w-10">
-//                     <input type="checkbox"
-//                       checked={filtered.length > 0 && filtered.every(s => selected.has(s.id))}
-//                       onChange={() => toggleSelectAll(filtered.map(s => s.id))}
-//                       className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-blue-600 cursor-pointer" />
-//                   </th>
-//                   {[ui.colName, ui.colMassar, ui.colGroup, lang === 'fr' ? 'Parent' : lang === 'ar' ? 'ولي الأمر' : 'Parent', ''].map((h, i) => (
-//                     <th key={i}
-//                       className={`px-4 sm:px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider
-//                         ${i === 3 ? '' : isRtl ? 'text-right' : 'text-left'}`}>
-//                       {h}
-//                     </th>
-//                   ))}
-//                 </tr>
-//               </thead>
-//               <tbody className="divide-y divide-slate-800">
-//                 {filtered.map((student) => (
-//                   <tr key={student.id}
-//                     className={`hover:bg-slate-800/40 transition group ${selected.has(student.id) ? 'bg-blue-600/5' : ''}`}>
-//                     {/* Row checkbox */}
-//                     <td className="px-4 py-3">
-//                       <input type="checkbox"
-//                         checked={selected.has(student.id)}
-//                         onChange={() => toggleSelect(student.id)}
-//                         className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-blue-600 cursor-pointer" />
-//                     </td>
-//                     <td className="px-4 sm:px-5 py-3 sm:py-4">
-//                       <div className={`flex items-center gap-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
-//                         <div className="w-7 h-7 rounded-full dark:bg-slate-700 bg-neutral-400 flex items-center justify-center shrink-0">
-//                           <span className="text-xs font-bold dark:text-slate-300 text-neutral-700">
-//                             {student.name.charAt(0).toUpperCase()}
-//                           </span>
-//                         </div>
-//                         <span className="text-sm font-medium text-white">{student.name}</span>
-//                       </div>
-//                     </td>
-//                     <td className="px-4 sm:px-5 py-3 sm:py-4">
-//                       <span className="text-sm text-slate-400 font-mono">{student.massar_code}</span>
-//                     </td>
-//                     <td className="px-4 sm:px-5 py-3 sm:py-4">
-//                       {student.groups
-//                         ? <span className="text-[10px] bg-slate-800 text-slate-300 font-medium px-1 py-1 rounded-lg">{student.groups.name}</span>
-//                         : <span className="text-slate-600 text-sm">{ui.unassigned}</span>
-//                       }
-//                     </td>
-//                     <td className="px-4 sm:px-5 py-3 sm:py-4">
-//                       <div className="space-y-1">
-//                         {(student as any).parent_name && (
-//                           <p className="text-xs text-slate-300 font-medium">{(student as any).parent_name}</p>
-//                         )}
-//                         {(student as any).parent_phone && (
-//                           <p className="text-xs text-slate-500 flex items-center gap-1">
-//                             📞 {(student as any).parent_phone}
-//                           </p>
-//                         )}
-//                         {(student as any).parent_email && (
-//                           <p className="text-xs text-slate-500 flex items-center gap-1">
-//                             ✉️ {(student as any).parent_email}
-//                           </p>
-//                         )}
-//                         {!(student as any).parent_phone && !(student as any).parent_email && (
-//                           <span className="text-xs text-slate-700">—</span>
-//                         )}
-//                       </div>
-//                     </td>
-//                     <td className="px-4 sm:px-5 py-3 sm:py-4">
-//                       <div className={`flex items-center gap-1 opacity-0 group-hover:opacity-100 transition
-//                         ${isRtl ? 'flex-row-reverse justify-start' : 'justify-end'}`}>
-//                         <button onClick={() => openEdit(student)}
-//                           className="p-1.5 rounded-lg text-slate-500 hover:text-blue-400 hover:bg-blue-500/10 transition">
-//                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-//                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-//                               d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-//                           </svg>
-//                         </button>
-//                       </div>
-//                     </td>
-//                   </tr>
-//                 ))}
-//               </tbody>
-//             </table>
-//           </div>
-//         )}
-//       </div>
-
-//       {/* Footer count */}
-//       {filtered.length > 0 && (
-//         <p className={`text-xs text-slate-600 ${isRtl ? 'text-left' : 'text-right'}`}>
-//           {ui.showing} {filtered.length} {ui.of} {students.length}
-//         </p>
-//       )}
-
-//       <ConfirmDialog
-//         open={confirmOpen}
-//         title={`${ui.confirmBulk} (${selected.size})`}
-//         message={ui.confirmBulkMsg}
-//         confirmLabel={ui.deleteLabel}
-//         cancelLabel={ui.cancelLabel}
-//         loading={deleting}
-//         onConfirm={handleBulkDelete}
-//         onCancel={() => setConfirmOpen(false)}
-//       />
-//     </div>
-//   )
-// }
-
-
 'use client'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
@@ -549,6 +9,7 @@ import { useEffect, useState } from 'react'
 import { useStudentStore } from '@/stores/useStudentStore'
 import { useGroupStore } from '@/stores/useGroupStore'
 import { useSettingsStore } from '@/stores/useSettingsStore'
+import { useAuthStore } from '@/stores/useAuthStore'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import type { StudentWithGroup, AddStudentPayload } from '@/types'
 import BulkStudentUpload from '@/components/dashboard/BulkStudentUpload'
@@ -570,6 +31,9 @@ const UI: Record<Lang, {
   unassigned: string; noMatch: string; noStudents: string
   noStudentsHint: string; showing: string; of: string
   confirmDelete: string
+  errDob: string; errGender: string
+  birthDate: string; gender: string; boy: string; girl: string; optional: string
+  parentLink: string; parentLinkTitle: string; parentLinkDesc: string; copy: string; copied: string; whatsapp: string; waText: string
   confirmBulk: string; confirmBulkMsg: string
   cancelLabel: string; deleteLabel: string
 }> = {
@@ -589,6 +53,12 @@ const UI: Record<Lang, {
     noStudentsHint: 'Ajoutez manuellement ou importez un fichier CSV',
     showing: 'Affichage de', of: 'sur',
     confirmDelete: 'Supprimer cet étudiant ?',
+    errDob: 'La date de naissance est obligatoire.', errGender: 'Veuillez choisir le sexe.',
+    birthDate: 'Date de naissance', gender: 'Sexe', boy: 'Garçon', girl: 'Fille', optional: '(optionnel)',
+    parentLink: 'Lien parents', parentLinkTitle: 'Lien d\'inscription des parents',
+    parentLinkDesc: 'Envoyez ce lien aux parents. Ils créent leur compte avec le code Massar et la date de naissance de leurs enfants.',
+    copy: 'Copier', copied: 'Copié ✓', whatsapp: 'Envoyer sur WhatsApp',
+    waText: 'Bonjour, créez votre espace parent {school} pour suivre les absences et paiements de vos enfants. Il suffit du code Massar et de la date de naissance : {link}',
     confirmBulk: 'Supprimer les étudiants', confirmBulkMsg: 'Cette action est irréversible.',
     cancelLabel: 'Annuler', deleteLabel: 'Supprimer',
   },
@@ -608,6 +78,12 @@ const UI: Record<Lang, {
     noStudentsHint: 'Add one manually or import a CSV file',
     showing: 'Showing', of: 'of',
     confirmDelete: 'Delete this student?',
+    errDob: 'Date of birth is required.', errGender: 'Please select the gender.',
+    birthDate: 'Date of birth', gender: 'Gender', boy: 'Boy', girl: 'Girl', optional: '(optional)',
+    parentLink: 'Parent link', parentLinkTitle: 'Parent registration link',
+    parentLinkDesc: 'Send this link to parents. They create their account with the Massar code and date of birth of their children.',
+    copy: 'Copy', copied: 'Copied ✓', whatsapp: 'Send on WhatsApp',
+    waText: 'Hello, create your {school} parent account to follow your children\'s absences and payments. You only need the Massar code and date of birth: {link}',
     confirmBulk: 'Delete students', confirmBulkMsg: 'This action cannot be undone.',
     cancelLabel: 'Cancel', deleteLabel: 'Delete',
   },
@@ -627,6 +103,12 @@ const UI: Record<Lang, {
     noStudentsHint: 'أضف يدوياً أو استورد ملف CSV',
     showing: 'عرض', of: 'من',
     confirmDelete: 'حذف هذا الطالب؟',
+    errDob: 'تاريخ الازدياد مطلوب.', errGender: 'الرجاء اختيار النوع.',
+    birthDate: 'تاريخ الازدياد', gender: 'النوع', boy: 'ذكر', girl: 'أنثى', optional: '(اختياري)',
+    parentLink: 'رابط الآباء', parentLinkTitle: 'رابط تسجيل الآباء',
+    parentLinkDesc: 'أرسل هذا الرابط إلى الآباء. ينشئون حسابهم برمز مسار وتاريخ ازدياد أبنائهم.',
+    copy: 'نسخ', copied: 'تم النسخ ✓', whatsapp: 'إرسال عبر واتساب',
+    waText: 'السلام عليكم، أنشئ فضاء ولي الأمر الخاص بك في {school} لتتبع غياب وأداءات أبنائك. يكفي رمز مسار وتاريخ الازدياد: {link}',
     confirmBulk: 'حذف الطلاب', confirmBulkMsg: 'هذا الإجراء لا يمكن التراجع عنه.',
     cancelLabel: 'إلغاء', deleteLabel: 'حذف',
   },
@@ -634,7 +116,10 @@ const UI: Record<Lang, {
 
 const PLAN_LIMITS: Record<string, number> = { starter: 150, growth: 350, premium: Infinity }
 
-const EMPTY: AddStudentPayload = { name: '', massar_code: '', group_id: '', parent_name: '', parent_email: '', parent_phone: '' }
+const EMPTY: AddStudentPayload = { name: '', massar_code: '', group_id: '', date_of_birth: '', gender: '' }
+
+// 2013-03-21 → 21/03/2013
+const fmtDate = (d?: string | null) => d ? d.split('-').reverse().join('/') : ''
 
 export default function StudentsPage() {
   const { students, loading, error, fetchStudents, addStudent, updateStudent, deleteStudent } = useStudentStore()
@@ -643,7 +128,10 @@ export default function StudentsPage() {
   const lang = (language || 'fr') as Lang
   const ui = UI[lang]
   const isRtl = lang === 'ar'
+  const { profile } = useAuthStore()
 
+  const [showLink,    setShowLink]    = useState(false)
+  const [copied,      setCopied]      = useState(false)
   const [showForm,    setShowForm]    = useState(false)
   const [showUpload,  setShowUpload]  = useState(false)
   const [form,        setForm]        = useState<AddStudentPayload>(EMPTY)
@@ -658,10 +146,17 @@ export default function StudentsPage() {
 
   useEffect(() => { fetchStudents(); fetchGroups() }, [fetchStudents, fetchGroups])
 
-  const openAdd  = () => { setShowUpload(false); setEditId(null); setForm(EMPTY); setFormError(''); setShowForm(true) }
+  const parentLink = typeof window !== 'undefined' && profile?.school_id
+    ? `${window.location.origin}/auth/parent-register/${profile.school_id}` : ''
+  const copyLink = async () => {
+    try { await navigator.clipboard.writeText(parentLink); setCopied(true); setTimeout(() => setCopied(false), 2000) } catch {}
+  }
+  const waShare = `https://wa.me/?text=${encodeURIComponent(ui.waText.replace('{school}', (profile as any)?.schools?.name ?? '').replace('{link}', parentLink))}`
+
+  const openAdd  = () => { setShowLink(false); setShowUpload(false); setEditId(null); setForm(EMPTY); setFormError(''); setShowForm(true) }
   const openEdit = (s: StudentWithGroup) => {
     setShowUpload(false); setEditId(s.id)
-    setForm({ name: s.name, massar_code: s.massar_code, group_id: s.group_id ?? '', parent_name: (s as any).parent_name ?? '', parent_email: (s as any).parent_email ?? '', parent_phone: (s as any).parent_phone ?? '' })
+    setForm({ name: s.name, massar_code: s.massar_code, group_id: s.group_id ?? '', date_of_birth: s.date_of_birth ?? '', gender: s.gender ?? '' })
     setFormError(''); setShowForm(true)
   }
   const handleCancel = () => { setShowForm(false); setEditId(null); setForm(EMPTY); setFormError('') }
@@ -680,14 +175,14 @@ export default function StudentsPage() {
     if (!form.name.trim())        { setFormError(ui.errName); return }
     if (!form.massar_code.trim()) { setFormError(ui.errMassar); return }
     if (!form.group_id)           { setFormError(ui.errGroup); return }
-    if (!form.parent_phone?.trim()) {
-      setFormError(lang === 'ar' ? 'رقم هاتف ولي الأمر مطلوب' : lang === 'fr' ? 'Le téléphone du parent est obligatoire' : 'Parent phone is required')
-      return
-    }
+    if (!form.date_of_birth)      { setFormError(ui.errDob); return }
+    if (!form.gender)             { setFormError(ui.errGender); return }
     setSaving(true); setFormError('')
 
+    const payload: AddStudentPayload = { ...form, date_of_birth: form.date_of_birth || null, gender: form.gender || null }
+
     if (editId) {
-      await updateStudent(editId, form)
+      await updateStudent(editId, payload)
     } else {
       // ── Check plan limit before adding ──
       const supabase = createClient()
@@ -711,7 +206,7 @@ export default function StudentsPage() {
         }
       }
 
-      const id = await addStudent(form)
+      const id = await addStudent(payload)
       if (!id) { setSaving(false); return }
     }
 
@@ -742,7 +237,15 @@ export default function StudentsPage() {
           </p>
         </div>
         <div className={`flex items-center gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
-          <button onClick={() => { setShowUpload(v => !v); setShowForm(false) }}
+          <button onClick={() => { setShowLink(v => !v); setShowUpload(false); setShowForm(false) }}
+            className={`flex items-center gap-2 text-sm font-medium px-3 sm:px-4 py-2.5 rounded-xl border transition-all ${isRtl ? 'flex-row-reverse' : ''}
+              ${showLink ? 'bg-slate-700 border-slate-600 text-white' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'}`}>
+            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+            </svg>
+            <span className="hidden sm:inline">{ui.parentLink}</span>
+          </button>
+          <button onClick={() => { setShowUpload(v => !v); setShowForm(false); setShowLink(false) }}
             className={`flex items-center gap-2 text-sm font-medium px-3 sm:px-4 py-2.5 rounded-xl border transition-all ${isRtl ? 'flex-row-reverse' : ''}
               ${showUpload ? 'bg-slate-700 border-slate-600 text-white' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'}`}>
             <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -759,6 +262,37 @@ export default function StudentsPage() {
           </button>
         </div>
       </div>
+
+      {/* Parent registration link */}
+      {showLink && (
+        <div className="bg-slate-900 border border-slate-700 rounded-2xl p-4 sm:p-5 space-y-3">
+          <div className={`flex items-start justify-between gap-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
+            <div>
+              <h3 className="text-sm font-semibold text-white">{ui.parentLinkTitle}</h3>
+              <p className="text-xs text-slate-500 mt-0.5">{ui.parentLinkDesc}</p>
+            </div>
+            <button onClick={() => setShowLink(false)} className="text-slate-500 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition shrink-0">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <input readOnly value={parentLink} dir="ltr" onFocus={e => e.target.select()}
+              className="flex-1 min-w-0 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-slate-300 font-mono focus:outline-none" />
+            <div className="flex gap-2">
+              <button onClick={copyLink}
+                className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium px-4 py-2.5 rounded-xl transition whitespace-nowrap">
+                {copied ? ui.copied : ui.copy}
+              </button>
+              <a href={waShare} target="_blank" rel="noopener noreferrer"
+                className="flex-1 sm:flex-none text-center bg-green-600 hover:bg-green-500 text-white text-sm font-medium px-4 py-2.5 rounded-xl transition whitespace-nowrap">
+                {ui.whatsapp}
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* CSV Upload panel */}
       {showUpload && (
@@ -803,35 +337,23 @@ export default function StudentsPage() {
                     {groups.map(g => <option key={g.id} value={g.id}>{g.name} ({ui.year} {g.year})</option>)}
                   </select>
                 </div>
-              </div>
-            </div>
-
-            <div>
-              <p className={`text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 ${isRtl ? 'text-right' : ''}`}>
-                {lang === 'ar' ? 'معلومات ولي الأمر' : lang === 'fr' ? 'Informations parent' : 'Parent info'}
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className={`block text-xs font-medium text-slate-400 mb-1.5 ${isRtl ? 'text-right' : ''}`}>{lang === 'ar' ? 'اسم ولي الأمر' : lang === 'fr' ? 'Nom du parent' : 'Parent name'}</label>
-                  <input type="text" value={form.parent_name ?? ''} onChange={e => setForm(f => ({ ...f, parent_name: e.target.value }))} placeholder={lang === 'ar' ? 'محمد العمراني' : 'Mohamed Amrani'} className={inputCls}/>
-                </div>
-                <div>
-                  <label className={`block text-xs font-medium text-slate-400 mb-1.5 ${isRtl ? 'text-right' : ''}`}>{lang === 'ar' ? 'هاتف ولي الأمر' : lang === 'fr' ? 'Téléphone parent' : 'Parent phone'} <span className="text-red-400">*</span></label>
-                  <input type="tel" value={form.parent_phone ?? ''} onChange={e => setForm(f => ({ ...f, parent_phone: e.target.value }))} placeholder="+212 6XX XXX XXX" className={inputCls}/>
+                  <label className={`block text-xs font-medium text-slate-400 mb-1.5 ${isRtl ? 'text-right' : ''}`}>
+                    {ui.birthDate} <span className="text-red-400">*</span>
+                  </label>
+                  <input type="date" value={form.date_of_birth ?? ''} onChange={e => setForm(f => ({ ...f, date_of_birth: e.target.value }))} className={inputCls}/>
                 </div>
                 <div>
                   <label className={`block text-xs font-medium text-slate-400 mb-1.5 ${isRtl ? 'text-right' : ''}`}>
-                    {lang === 'ar' ? 'بريد ولي الأمر' : lang === 'fr' ? 'Email parent' : 'Parent email'}{' '}
-                    <span className="text-slate-600 text-[10px]">{lang === 'fr' ? '(optionnel)' : lang === 'ar' ? '(اختياري)' : '(optional)'}</span>
+                    {ui.gender} <span className="text-red-400">*</span>
                   </label>
-                  <input type="email" value={form.parent_email ?? ''} onChange={e => setForm(f => ({ ...f, parent_email: e.target.value }))} placeholder="parent@email.com" className={inputCls}/>
+                  <select value={form.gender ?? ''} onChange={e => setForm(f => ({ ...f, gender: e.target.value }))} className={inputCls}>
+                    <option value="">—</option>
+                    <option value="M">{ui.boy}</option>
+                    <option value="F">{ui.girl}</option>
+                  </select>
                 </div>
               </div>
-              <p className={`text-[11px] text-amber-400/80 mt-2 ${isRtl ? 'text-right' : ''}`}>
-                ⚠️ {lang === 'ar' ? 'سيُرسل بريد تنبيه تلقائياً إلى ولي الأمر عند تجاوز حد الغيابات المحدد.'
-                  : lang === 'fr' ? "Un email d'alerte sera envoyé automatiquement au parent quand le seuil d'absences est atteint."
-                  : 'An alert email will be sent automatically to the parent when the absence threshold is reached.'}
-              </p>
             </div>
 
             {formError && (
@@ -919,8 +441,8 @@ export default function StudentsPage() {
                     <input type="checkbox" checked={filtered.length > 0 && filtered.every(s => selected.has(s.id))} onChange={() => toggleSelectAll(filtered.map(s => s.id))}
                       className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-blue-600 cursor-pointer"/>
                   </th>
-                  {[ui.colName, ui.colMassar, ui.colGroup, lang === 'fr' ? 'Parent' : lang === 'ar' ? 'ولي الأمر' : 'Parent', ''].map((h, i) => (
-                    <th key={i} className={`px-4 sm:px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider ${i === 3 ? '' : isRtl ? 'text-right' : 'text-left'}`}>{h}</th>
+                  {[ui.colName, ui.colMassar, ui.colGroup, ui.birthDate, ui.gender, ''].map((h, i) => (
+                    <th key={i} className={`px-4 sm:px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap ${isRtl ? 'text-right' : 'text-left'}`}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -936,7 +458,7 @@ export default function StudentsPage() {
                         <div className="w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center shrink-0">
                           <span className="text-xs font-bold text-slate-300">{student.name.charAt(0).toUpperCase()}</span>
                         </div>
-                        <span className="text-sm font-medium text-white">{student.name}</span>
+                        <span className="text-sm font-medium text-white whitespace-nowrap">{student.name}</span>
                       </div>
                     </td>
                     <td className="px-4 sm:px-5 py-3 sm:py-4">
@@ -948,15 +470,15 @@ export default function StudentsPage() {
                         : <span className="text-slate-600 text-sm">{ui.unassigned}</span>}
                     </td>
                     <td className="px-4 sm:px-5 py-3 sm:py-4">
-                      <div className="space-y-1">
-                        {(student as any).parent_name  && <p className="text-xs text-slate-300 font-medium">{(student as any).parent_name}</p>}
-                        {(student as any).parent_phone && <p className="text-xs text-slate-500">📞 {(student as any).parent_phone}</p>}
-                        {(student as any).parent_email && <p className="text-xs text-slate-500">✉️ {(student as any).parent_email}</p>}
-                        {!(student as any).parent_phone && !(student as any).parent_email && <span className="text-xs text-slate-700">—</span>}
-                      </div>
+                      <span className="text-sm text-slate-400 whitespace-nowrap" dir="ltr">{fmtDate(student.date_of_birth) || <span className="text-slate-700">—</span>}</span>
                     </td>
                     <td className="px-4 sm:px-5 py-3 sm:py-4">
-                      <div className={`flex items-center gap-1 opacity-0 group-hover:opacity-100 transition ${isRtl ? 'flex-row-reverse justify-start' : 'justify-end'}`}>
+                      {student.gender === 'M' ? <span className="text-xs font-medium px-2 py-1 rounded-lg bg-blue-500/10 text-blue-400">{ui.boy}</span>
+                        : student.gender === 'F' ? <span className="text-xs font-medium px-2 py-1 rounded-lg bg-pink-500/10 text-pink-400">{ui.girl}</span>
+                        : <span className="text-slate-700 text-sm">—</span>}
+                    </td>
+                    <td className="px-4 sm:px-5 py-3 sm:py-4">
+                      <div className={`flex items-center gap-1 lg:opacity-0 lg:group-hover:opacity-100 transition ${isRtl ? 'flex-row-reverse justify-start' : 'justify-end'}`}>
                         <button onClick={() => openEdit(student)} className="p-1.5 rounded-lg text-slate-500 hover:text-blue-400 hover:bg-blue-500/10 transition">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>

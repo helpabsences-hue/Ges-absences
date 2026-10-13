@@ -62,6 +62,8 @@ export interface Student {
   parent_name?:  string | null
   parent_phone?: string | null
   parent_email?: string | null
+  date_of_birth?: string | null   // YYYY-MM-DD
+  gender?:        string | null   // 'M' | 'F'
 }
 
 export interface StudentWithGroup extends Student {
@@ -170,6 +172,8 @@ export interface AddStudentPayload {
   parent_name?: string
   parent_email?: string
   parent_phone?: string
+  date_of_birth?: string | null
+  gender?:        string | null
 }
 
 export interface AddGroupPayload {

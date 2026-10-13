@@ -1,0 +1,42 @@
+# .github/workflows/backup.yml — weekly Supabase backup (free, runs on GitHub)
+# Needs one secret: SUPABASE_DB_URL (Supabase → Connect → Session pooler connection string)
+# ⚠️ Only use this in a PRIVATE repository: the backup contains students' data.
+
+name: Supabase backup
+
+on:
+  schedule:
+    - cron: '0 3 * * 0'      # every Sunday at 03:00 (Morocco time = UTC+0/+1)
+  workflow_dispatch:          # "Run workflow" button for a backup right now
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Stop if the repository is public
+        if: github.event.repository.private == false
+        run: |
+          echo "This repository is PUBLIC — backup cancelled to protect students' data."
+          exit 1
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Dump database
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          mkdir backup
+          supabase db dump --db-url "$DB_URL" -f backup/roles.sql --role-only
+          supabase db dump --db-url "$DB_URL" -f backup/schema.sql
+          supabase db dump --db-url "$DB_URL" -f backup/data.sql --data-only --use-copy
+          supabase db dump --db-url "$DB_URL" -f backup/auth_data.sql --data-only --use-copy --schema auth
+          ls -lh backup
+
+      - name: Save backup (kept 90 days)
+        uses: actions/upload-artifact@v4
+        with:
+          name: attendefy-backup-${{ github.run_number }}-${{ github.run_id }}
+          path: backup/
+          retention-days: 90

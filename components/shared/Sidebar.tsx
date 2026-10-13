@@ -1,3 +1,215 @@
+// 'use client'
+// // components/shared/Sidebar.tsx
+
+// import Link from 'next/link'
+// import { usePathname, useRouter } from 'next/navigation'
+// import { useState, useEffect } from 'react'
+// import { useAuthStore } from '@/stores/useAuthStore'
+// import { useSettingsStore } from '@/stores/useSettingsStore'
+// import type { Role } from '@/types'
+// import { LogoIcon } from './LogoIcon'
+
+// type Lang = 'fr' | 'en' | 'ar'
+
+// const NAV_LABELS: Record<string, Record<Lang, string>> = {
+//   '/dashboard':             { fr: 'Tableau de Bord',  en: 'Dashboard',      ar: 'لوحة التحكم'   },
+//   '/dashboard/admins':      { fr: 'Administrateurs',  en: 'Administrators', ar: 'المديرون'       },
+//   '/dashboard/teachers':    { fr: 'Enseignants',      en: 'Teachers',       ar: 'الأساتذة'       },
+//   '/dashboard/students':    { fr: 'Étudiants',        en: 'Students',       ar: 'الطلاب'         },
+//   '/dashboard/groups':      { fr: 'Groupes',          en: 'Groups',         ar: 'الفصول'         },
+//   '/dashboard/fields':      { fr: 'Filières',         en: 'Fields',         ar: 'الشُّعَب'       },
+//   '/dashboard/courses':     { fr: 'Matières',         en: 'Courses',        ar: 'المواد'         },
+//   '/dashboard/planning':    { fr: 'Planning',         en: 'Planning',       ar: 'الجدول الزمني'  },
+//   '/dashboard/reports':     { fr: 'Rapports',         en: 'Reports',        ar: 'التقارير'       },
+//   '/dashboard/invitations': { fr: 'Invitations',      en: 'Invitations',    ar: 'الدعوات'        },
+//   '/dashboard/ai':          { fr: 'AI Assistant',     en: 'AI Assistant',   ar: 'المساعد الذكي'  },
+//   '/dashboard/settings':    { fr: 'Paramètres',       en: 'Settings',       ar: 'الإعدادات'      },
+// }
+
+// const UI: Record<Lang, { school: string; signOut: string }> = {
+//   fr: { school: 'École',   signOut: 'Déconnexion'   },
+//   en: { school: 'School',  signOut: 'Sign out'      },
+//   ar: { school: 'المدرسة', signOut: 'تسجيل الخروج' },
+// }
+
+// const IC = 'w-[17px] h-[17px] shrink-0'
+
+// interface NavItem { href: string; roles: Role[]; icon: React.ReactNode }
+
+// const NAV_ITEMS: NavItem[] = [
+//   { href: '/dashboard', roles: ['super_admin','admin'], icon:
+//     <svg className={IC} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg> },
+
+//   { href: '/dashboard/admins', roles: ['super_admin'], icon:
+//     <svg className={IC} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg> },
+
+//   { href: '/dashboard/teachers', roles: ['super_admin','admin'], icon:
+//     <svg className={IC} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg> },
+
+//   { href: '/dashboard/students', roles: ['super_admin','admin'], icon:
+//     <svg className={IC} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg> },
+
+//   { href: '/dashboard/groups', roles: ['super_admin','admin'], icon:
+//     <svg className={IC} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg> },
+
+//   { href: '/dashboard/fields', roles: ['super_admin','admin'], icon:
+//     <svg className={IC} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg> },
+
+//   { href: '/dashboard/courses', roles: ['super_admin','admin'], icon:
+//     <svg className={IC} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg> },
+
+//   { href: '/dashboard/planning', roles: ['super_admin','admin'], icon:
+//     <svg className={IC} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg> },
+
+//   { href: '/dashboard/reports', roles: ['super_admin','admin'], icon:
+//     <svg className={IC} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg> },
+
+//   { href: '/dashboard/invitations', roles: ['super_admin','admin'], icon:
+//     <svg className={IC} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg> },
+
+//   { href: '/dashboard/ai', roles: ['super_admin','admin'], icon:
+//     <svg className={IC} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg> },
+
+//   { href: '/dashboard/settings', roles: ['super_admin','admin'], icon:
+//     <svg className={IC} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg> },
+// ]
+
+// export default function Sidebar() {
+//   const pathname             = usePathname()
+//   const router               = useRouter()
+//   const { profile, signOut } = useAuthStore()
+//   const { language }         = useSettingsStore()
+//   const [mobileOpen, setMobileOpen] = useState(false)
+
+//   const lang  = (language || 'fr') as Lang
+//   const isRtl = lang === 'ar'
+//   const ui    = UI[lang]
+
+//   useEffect(() => { setMobileOpen(false) }, [pathname])
+
+//   if (!profile) return null
+
+//   const visibleNav = NAV_ITEMS.filter(item => item.roles.includes(profile.role))
+//   const isActive   = (href: string) =>
+//     href === '/dashboard' ? pathname === '/dashboard' : pathname.startsWith(href)
+//   const handleSignOut = async () => { await signOut(); router.push('/auth/login') }
+
+//   const sidebarInner = (
+//     <div className={`w-64 bg-slate-900 flex flex-col h-full ${isRtl ? 'border-l' : 'border-r'} border-slate-800`}>
+
+//       {/* ── Logo + school ── */}
+//       <div className={`shrink-0 px-4 py-3 border-b border-slate-800 ${isRtl ? 'text-right' : ''}`}>
+//         <Link href="/dashboard"
+//           className={`flex items-center gap-2 mb-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
+//           <LogoIcon className="w-8 h-8 shrink-0" />
+//           <span className="text-lg font-bold tracking-tight text-white">
+//             Attend<span className="text-blue-400">efy</span>
+//           </span>
+//         </Link>
+
+//         <div className={`bg-slate-800/50 border border-slate-700 rounded-xl px-3 py-2 ${isRtl ? 'text-right' : ''}`}>
+//           <span className="text-[9px] font-bold uppercase tracking-widest text-blue-600 block">
+//             {ui.school}
+//           </span>
+//           <span className="text-xs font-semibold text-white truncate block mt-0.5">
+//             {profile.schools?.name}
+//           </span>
+//           <span className="text-[11px] text-slate-400 truncate block mt-0.5">
+//             📍 {profile.schools?.city}
+//           </span>
+//         </div>
+//       </div>
+
+//       {/* ── Nav ── */}
+//       <nav className="flex-1 min-h-0 px-2 py-1.5 space-y-0.5 overflow-hidden">
+//         {visibleNav.map((item) => {
+//           const active = isActive(item.href)
+//           const label  = NAV_LABELS[item.href]?.[lang] ?? item.href
+//           const isAI   = item.href === '/dashboard/ai'
+
+//           return (
+//             <Link key={item.href} href={item.href}
+//               className={`flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-[13px] font-medium
+//                 transition-all duration-150 group
+//                 ${isRtl ? 'flex-row-reverse' : ''}
+//                 ${active
+//                   ? 'bg-blue-700 text-white shadow-sm shadow-blue-900/40'
+//                   : isAI
+//                     ? 'text-violet-400 hover:bg-blue-400/20 hover:text-white'
+//                     : 'text-slate-400 hover:bg-blue-400/20 hover:text-white'
+//                 }`}
+//             >
+//               <span className={`shrink-0 transition-colors
+//                 ${active
+//                   ? 'text-white'
+//                   : isAI
+//                     ? 'text-violet-400 group-hover:text-white'
+//                     : 'text-slate-500 group-hover:text-white'
+//                 }`}>
+//                 {item.icon}
+//               </span>
+//               <span className={`truncate leading-none ${isRtl ? 'text-right flex-1' : ''}`}>
+//                 {label}
+//               </span>
+//               {isAI && !active && (
+//                 <span className="ml-auto shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-violet-500/20 text-violet-400 border border-violet-500/20">
+//                   AI
+//                 </span>
+//               )}
+//             </Link>
+//           )
+//         })}
+//       </nav>
+
+//       {/* ── Sign out ── */}
+//       <div className="shrink-0 px-2 py-2 border-t border-slate-800">
+//         <button onClick={handleSignOut}
+//           className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-[12px] font-medium
+//             text-slate-500 hover:bg-red-500/10 hover:text-red-400 transition-all
+//             ${isRtl ? 'flex-row-reverse' : ''}`}>
+//           <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+//             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+//               d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+//           </svg>
+//           <span className={isRtl ? 'flex-1 text-right' : ''}>{ui.signOut}</span>
+//         </button>
+//       </div>
+//     </div>
+//   )
+
+//   return (
+//     <>
+//       {/* Desktop */}
+//       <div className="hidden md:flex h-screen sticky top-0 shrink-0">
+//         {sidebarInner}
+//       </div>
+
+//       {/* Mobile hamburger */}
+//       <button onClick={() => setMobileOpen(v => !v)}
+//         className="md:hidden fixed top-3 left-3 z-50 w-9 h-9 bg-slate-900 border border-slate-800
+//           rounded-xl flex items-center justify-center text-slate-400 hover:text-white transition shadow-lg"
+//         aria-label="Toggle menu">
+//         {mobileOpen
+//           ? <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+//           : <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16"/></svg>
+//         }
+//       </button>
+
+//       {/* Mobile drawer */}
+//       {mobileOpen && (
+//         <>
+//           <div className="md:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+//             onClick={() => setMobileOpen(false)} />
+//           <div className={`md:hidden fixed top-0 z-40 h-full shadow-2xl ${isRtl ? 'right-0' : 'left-0'}`}>
+//             {sidebarInner}
+//           </div>
+//         </>
+//       )}
+//     </>
+//   )
+// }
+
+
 'use client'
 // components/shared/Sidebar.tsx
 
@@ -21,6 +233,7 @@ const NAV_LABELS: Record<string, Record<Lang, string>> = {
   '/dashboard/courses':     { fr: 'Matières',         en: 'Courses',        ar: 'المواد'         },
   '/dashboard/planning':    { fr: 'Planning',         en: 'Planning',       ar: 'الجدول الزمني'  },
   '/dashboard/reports':     { fr: 'Rapports',         en: 'Reports',        ar: 'التقارير'       },
+  '/dashboard/payments':    { fr: 'Paiements',        en: 'Payments',       ar: 'الأداءات'       },
   '/dashboard/invitations': { fr: 'Invitations',      en: 'Invitations',    ar: 'الدعوات'        },
   '/dashboard/ai':          { fr: 'AI Assistant',     en: 'AI Assistant',   ar: 'المساعد الذكي'  },
   '/dashboard/settings':    { fr: 'Paramètres',       en: 'Settings',       ar: 'الإعدادات'      },
@@ -63,6 +276,9 @@ const NAV_ITEMS: NavItem[] = [
 
   { href: '/dashboard/reports', roles: ['super_admin','admin'], icon:
     <svg className={IC} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg> },
+
+  { href: '/dashboard/payments', roles: ['super_admin','admin'], icon:
+    <svg className={IC} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg> },
 
   { href: '/dashboard/invitations', roles: ['super_admin','admin'], icon:
     <svg className={IC} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg> },
@@ -108,7 +324,7 @@ export default function Sidebar() {
         </Link>
 
         <div className={`bg-slate-800/50 border border-slate-700 rounded-xl px-3 py-2 ${isRtl ? 'text-right' : ''}`}>
-          <span className="text-[9px] font-bold uppercase tracking-widest text-blue-600 block">
+          <span className="text-[9px] font-bold uppercase tracking-widest text-blue-400 block">
             {ui.school}
           </span>
           <span className="text-xs font-semibold text-white truncate block mt-0.5">
