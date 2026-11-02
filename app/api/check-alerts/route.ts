@@ -3,19 +3,26 @@
 import { createServiceClient } from '@/lib/supabase/server'
 import { createClient }        from '@/lib/supabase/server'
 import { NextResponse, type NextRequest } from 'next/server'
+import { escapeHtml } from '@/lib/utils'
 
 const BREVO_API_KEY = process.env.BREVO_API_KEY!
 const FROM_EMAIL    = process.env.FROM_EMAIL || 'noreply@attendefy.com'
 const FROM_NAME     = 'Attendefy'
 
 export async function POST(request: NextRequest) {
-  const { school_id } = await request.json()
+  const { school_id } = await request.json().catch(() => ({}))
   if (!school_id) return NextResponse.json({ error: 'school_id required' }, { status: 400 })
 
-  // Verify caller
+  // Verify caller — only staff of this school can trigger its alerts
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { data: caller } = await supabase
+    .from('profiles').select('role, school_id').eq('id', user.id).single()
+  if (!caller || !['super_admin', 'admin', 'teacher'].includes(caller.role) || caller.school_id !== school_id) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
 
   const admin = createServiceClient()
 
@@ -29,9 +36,13 @@ export async function POST(request: NextRequest) {
   const threshold = school?.absence_threshold ?? 3
   const schoolLang = school?.language ?? 'fr'
 
-  // Count absences per student in this school with session details
-  const { data: absenceCounts } = await admin
-    .from('attendance')
+  // Count absences per student in this school with session details.
+  // Supabase returns at most 1000 rows per request, so read page by page.
+  const absenceCounts: any[] = []
+  const PAGE = 1000
+  for (let from = 0; ; from += PAGE) {
+    const { data: page, error: pageErr } = await admin
+      .from('attendance')
     .select(`
       student_id,
       students!inner ( id, name, parent_name, parent_phone, parent_email, school_id ),
@@ -44,10 +55,19 @@ export async function POST(request: NextRequest) {
         )
       )
     `)
-    .eq('status', 'absent')
-    .eq('students.school_id', school_id)
+      .eq('status', 'absent')
+      .eq('students.school_id', school_id)
+      .order('id', { ascending: true })
+      .range(from, from + PAGE - 1)
+    if (pageErr) {
+      console.error('check-alerts query error:', pageErr.message)
+      return NextResponse.json({ error: 'Query failed' }, { status: 500 })
+    }
+    absenceCounts.push(...(page ?? []))
+    if (!page || page.length < PAGE) break
+  }
 
-  if (!absenceCounts || absenceCounts.length === 0) {
+  if (absenceCounts.length === 0) {
     return NextResponse.json({ checked: 0, alerted: 0 })
   }
 
@@ -73,7 +93,6 @@ export async function POST(request: NextRequest) {
   console.log('check-alerts: threshold=' + threshold + ', students to check=' + toAlert.length)
   let alerted = 0
   for (const [studentId, { count, student }] of toAlert) {
-    console.log('Checking student:', student.name, 'absences:', count, 'email:', student.parent_email)
     // Check if we already sent an alert for this absence level
     const nextAlertAt = Math.floor(count / threshold) * threshold
     const { data: existingRows } = await admin
@@ -84,12 +103,12 @@ export async function POST(request: NextRequest) {
       .limit(1)
 
     if (existingRows && existingRows.length > 0) {
-      console.log('Already alerted student:', student.name, 'at level:', nextAlertAt)
       continue
     }
 
     // Send email if parent has email
     if (student.parent_email) {
+      try {
       await sendAlertEmail({
         parentEmail: student.parent_email,
         parentName:  student.parent_name ?? 'Parent',
@@ -100,6 +119,11 @@ export async function POST(request: NextRequest) {
         sessions:    countMap[studentId].sessions,
         lang:        schoolLang,
       })
+      } catch (err: any) {
+        // Don't record the alert, so it is retried next time
+        console.error('check-alerts email error:', err?.message)
+        continue
+      }
     }
 
     // Record the alert
@@ -128,9 +152,15 @@ async function sendAlertEmail({
   sessions:    { date: string; start: string; end: string; course: string }[]
   lang?:       string
 }) {
+  // Names are typed by users — escape them before building the HTML
+  const rawStudent = studentName, rawSchool = schoolName
+  parentName  = escapeHtml(parentName)
+  studentName = escapeHtml(studentName)
+  schoolName  = escapeHtml(schoolName)
+  sessions    = sessions.map(s => ({ ...s, course: escapeHtml(s.course) }))
   const t = {
     fr: {
-      subject:   `⚠️ Alerte absences — ${studentName} (${schoolName})`,
+      subject:   `⚠️ Alerte absences — ${rawStudent} (${rawSchool})`,
       title:     "Alerte d'absences",
       subtitle:  'Information importante concernant votre enfant',
       greeting:  `Bonjour <strong>${parentName}</strong>,`,
@@ -141,7 +171,7 @@ async function sendAlertEmail({
       auto:      `Ce message est envoyé automatiquement par ${schoolName} via Attendefy.`,
     },
     en: {
-      subject:   `⚠️ Absence Alert — ${studentName} (${schoolName})`,
+      subject:   `⚠️ Absence Alert — ${rawStudent} (${rawSchool})`,
       title:     'Absence Alert',
       subtitle:  'Important information about your child',
       greeting:  `Hello <strong>${parentName}</strong>,`,
@@ -152,7 +182,7 @@ async function sendAlertEmail({
       auto:      `This message is sent automatically by ${schoolName} via Attendefy.`,
     },
     ar: {
-      subject:   `⚠️ تنبيه غياب — ${studentName} (${schoolName})`,
+      subject:   `⚠️ تنبيه غياب — ${rawStudent} (${rawSchool})`,
       title:     'تنبيه غياب',
       subtitle:  'معلومات مهمة تخص طفلكم',
       greeting:  `مرحباً <strong>${parentName}</strong>،`,
@@ -198,7 +228,7 @@ async function sendAlertEmail({
             ${sessions.sort((a, b) => a.date.localeCompare(b.date)).map((s, i) => `
             <tr style="background:${i % 2 === 0 ? '#fff' : '#fef9f9'};">
               <td style="padding:6px 10px;color:#374151;border-bottom:1px solid #fecaca;">
-                ${new Date(s.date).toLocaleDateString(lang === 'ar' ? 'ar-MA' : lang === 'en' ? 'en-GB' : 'fr-FR', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+                ${new Date(s.date + 'T00:00:00').toLocaleDateString(lang === 'ar' ? 'ar-MA' : lang === 'en' ? 'en-GB' : 'fr-FR', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
               </td>
               <td style="padding:6px 10px;color:#374151;border-bottom:1px solid #fecaca;">${s.course}</td>
               <td style="padding:6px 10px;color:#374151;border-bottom:1px solid #fecaca;font-family:monospace;">${s.start} – ${s.end}</td>
@@ -229,7 +259,5 @@ async function sendAlertEmail({
     }),
   })
 
-  const result = await res.json()
-  console.log('Brevo response:', res.status, JSON.stringify(result))
-  if (!res.ok) throw new Error('Brevo error: ' + JSON.stringify(result))
+  if (!res.ok) throw new Error('Brevo error: ' + res.status + ' ' + (await res.text()))
 }

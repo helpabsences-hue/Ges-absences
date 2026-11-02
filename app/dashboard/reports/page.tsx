@@ -82,8 +82,8 @@
 //   const isRtl      = lang === 'ar'
 //   const dateLocale = lang === 'ar' ? 'ar-MA' : lang === 'en' ? 'en-GB' : 'fr-FR'
 
-//   const [dateFrom,      setDateFrom]      = useState(() => { const d = new Date(); d.setDate(d.getDate()-30); return d.toISOString().split('T')[0] })
-//   const [dateTo,        setDateTo]        = useState(() => new Date().toISOString().split('T')[0])
+//   const [dateFrom,      setDateFrom]      = useState(() => { const d = new Date(); d.setDate(d.getDate()-30); return localDate(d) })
+//   const [dateTo,        setDateTo]        = useState(() => localDate())
 //   const [selectedGroup, setSelectedGroup] = useState('')
 //   const [mainTab,       setMainTab]       = useState<MainTab>('charts')
 //   const [statTab,       setStatTab]       = useState<StatTab>('group')
@@ -330,7 +330,7 @@
 //               { label: lang === 'ar' ? '٣٠يوم' : lang === 'en' ? '30d' : '30j', days: 30 },
 //               { label: lang === 'ar' ? '٩٠يوم' : lang === 'en' ? '90d' : '90j', days: 90 },
 //             ].map(({ label, days }) => (
-//               <button key={label} onClick={() => { const d = new Date(); d.setDate(d.getDate()-days); setDateFrom(d.toISOString().split('T')[0]); setDateTo(new Date().toISOString().split('T')[0]) }}
+//               <button key={label} onClick={() => { const d = new Date(); d.setDate(d.getDate()-days); setDateFrom(localDate(d)); setDateTo(localDate()) }}
 //                 className="text-xs font-medium px-3 py-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 border border-slate-700 transition">
 //                 {label}
 //               </button>
@@ -405,6 +405,7 @@ export const dynamic = 'force-dynamic'
 // app/dashboard/reports/page.tsx — lean orchestrator (~120 lines)
 
 import { useEffect, useState, useCallback } from 'react'
+import { localDate } from '@/lib/utils'
 import * as XLSX from 'xlsx'
 import { createClient }     from '@/lib/supabase/client'
 import { useGroupStore }    from '@/stores/useGroupStore'
@@ -483,8 +484,8 @@ export default function ReportsPage() {
   const isRtl      = lang === 'ar'
   const dateLocale = lang === 'ar' ? 'ar-MA' : lang === 'en' ? 'en-GB' : 'fr-FR'
 
-  const [dateFrom,      setDateFrom]      = useState(() => { const d = new Date(); d.setDate(d.getDate()-30); return d.toISOString().split('T')[0] })
-  const [dateTo,        setDateTo]        = useState(() => new Date().toISOString().split('T')[0])
+  const [dateFrom,      setDateFrom]      = useState(() => { const d = new Date(); d.setDate(d.getDate()-30); return localDate(d) })
+  const [dateTo,        setDateTo]        = useState(() => localDate())
   const [selectedGroup, setSelectedGroup] = useState('')
   const [mainTab,       setMainTab]       = useState<MainTab>('charts')
   const [statTab,       setStatTab]       = useState<StatTab>('group')
@@ -733,7 +734,7 @@ export default function ReportsPage() {
               { label: lang === 'ar' ? '٣٠يوم' : lang === 'en' ? '30d' : '30j', days: 30 },
               { label: lang === 'ar' ? '٩٠يوم' : lang === 'en' ? '90d' : '90j', days: 90 },
             ].map(({ label, days }) => (
-              <button key={label} onClick={() => { const d = new Date(); d.setDate(d.getDate()-days); setDateFrom(d.toISOString().split('T')[0]); setDateTo(new Date().toISOString().split('T')[0]) }}
+              <button key={label} onClick={() => { const d = new Date(); d.setDate(d.getDate()-days); setDateFrom(localDate(d)); setDateTo(localDate()) }}
                 className="text-xs font-medium px-3 py-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 border border-slate-700 transition">
                 {label}
               </button>

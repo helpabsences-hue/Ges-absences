@@ -1,86 +1,94 @@
 // app/api/accept-staff-invite/route.ts
 // Handles teacher/admin invitation acceptance via token
 import { NextResponse, type NextRequest } from 'next/server'
-import { createClient as createAdmin } from '@supabase/supabase-js'
+import { createServiceClient } from '@/lib/supabase/server'
+
+const INVITE_VALID_DAYS = 30
 
 export async function POST(request: NextRequest) {
-  const { token, name, password } = await request.json()
+  const body = await request.json().catch(() => ({}))
+  const token    = typeof body.token === 'string' ? body.token : ''
+  const name     = String(body.name ?? '').trim()
+  const password = String(body.password ?? '')
 
   if (!token || !name || !password) {
     return NextResponse.json({ error: 'Token, name and password are required' }, { status: 400 })
   }
+  if (name.length > 80) {
+    return NextResponse.json({ error: 'Name is too long.' }, { status: 400 })
+  }
+  if (password.length < 8) {
+    return NextResponse.json({ error: 'Password must be at least 8 characters.' }, { status: 400 })
+  }
 
-  const admin = createAdmin(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+  const admin = createServiceClient()
 
   // 1. Find invitation by token
-  const { data: invitation, error: invErr } = await admin
+  const { data: invitation } = await admin
     .from('invitations')
     .select('*')
     .eq('token', token)
-    .single()
+    .maybeSingle()
 
-  if (invErr || !invitation) {
+  if (!invitation || !['admin', 'teacher'].includes(invitation.role)) {
     return NextResponse.json({ error: 'Invalid or expired invitation link.' }, { status: 400 })
   }
-
   if (invitation.status === 'accepted') {
     return NextResponse.json({ error: 'This invitation has already been used.' }, { status: 400 })
   }
+  const age = Date.now() - new Date(invitation.created_at).getTime()
+  if (invitation.created_at && age > INVITE_VALID_DAYS * 24 * 3600_000) {
+    return NextResponse.json({ error: 'Invalid or expired invitation link.' }, { status: 400 })
+  }
 
-  // 2. Create user account
+  // 2. Claim the invitation atomically, so the same link can't be used twice in parallel
+  const { data: claimed } = await admin
+    .from('invitations')
+    .update({ status: 'accepted' })
+    .eq('id', invitation.id)
+    .eq('status', 'pending')
+    .select('id')
+  if (!claimed || claimed.length === 0) {
+    return NextResponse.json({ error: 'This invitation has already been used.' }, { status: 400 })
+  }
+  const release = () =>
+    admin.from('invitations').update({ status: 'pending' }).eq('id', invitation.id)
+
+  // 3. Create the account. If an account already exists for this email we do NOT
+  //    change its password — the invite link would otherwise let anyone take it over.
   const { data: userData, error: userErr } = await admin.auth.admin.createUser({
-    email:             invitation.email,
+    email:         invitation.email,
     password,
-    email_confirm:     true,
-    user_metadata:     { name },
+    email_confirm: true,
+    user_metadata: { name },
   })
 
   if (userErr || !userData.user) {
-    // User might already exist — try to update password instead
-    const { data: existingUsers } = await admin.auth.admin.listUsers()
-    const existing = existingUsers?.users?.find(u => u.email === invitation.email)
-    if (existing) {
-      await admin.auth.admin.updateUserById(existing.id, { password })
-      // Update profile name
-      await admin.from('profiles').update({ name }).eq('id', existing.id)
-    } else {
-      return NextResponse.json({ error: userErr?.message ?? 'Failed to create account.' }, { status: 500 })
-    }
+    await release()
+    const exists = /already|registered|exists/i.test(userErr?.message ?? '')
+    return NextResponse.json(
+      { error: exists
+          ? 'An account already exists for this email. Please sign in, or ask the school to use another email.'
+          : (userErr?.message ?? 'Failed to create account.') },
+      { status: exists ? 409 : 500 }
+    )
   }
 
-  const userId = userData?.user?.id
+  // 4. Create the profile
+  const { error: profileErr } = await admin.from('profiles').upsert({
+    id:        userData.user.id,
+    name,
+    email:     invitation.email,
+    role:      invitation.role,
+    school_id: invitation.school_id,
+  })
 
-  // 3. Create or update profile
-  if (userId) {
-    const { data: existingProfile } = await admin
-      .from('profiles')
-      .select('id')
-      .eq('id', userId)
-      .maybeSingle()
-
-    if (existingProfile) {
-      await admin.from('profiles').update({
-        name, role: invitation.role,
-      }).eq('id', userId)
-    } else {
-      await admin.from('profiles').insert({
-        id:        userId,
-        name,
-        email:     invitation.email,
-        role:      invitation.role,
-        school_id: invitation.school_id,
-      })
-    }
+  if (profileErr) {
+    console.error('accept-staff-invite profile error:', profileErr.message)
+    await admin.auth.admin.deleteUser(userData.user.id)
+    await release()
+    return NextResponse.json({ error: 'Failed to create profile.' }, { status: 500 })
   }
-
-  // 4. Mark invitation as accepted
-  await admin
-    .from('invitations')
-    .update({ status: 'accepted' })
-    .eq('token', token)
 
   return NextResponse.json({ success: true })
 }

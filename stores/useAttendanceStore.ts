@@ -277,6 +277,7 @@
 import { create } from 'zustand'
 import { createClient } from '@/lib/supabase/client'
 import { useAuthStore } from './useAuthStore'
+import { localDate } from '@/lib/utils'
 import type {
   TeacherPlanningFull,
   ClassSession,
@@ -326,7 +327,7 @@ const TODAY_NAME = (): Day => {
   return names[new Date().getDay()] as Day
 }
 
-const TODAY_DATE = () => new Date().toISOString().split('T')[0]
+const TODAY_DATE = () => localDate()
 
 export const useAttendanceStore = create<AttendanceState>((set, get) => ({
   todaySlots:      [],
@@ -515,10 +516,19 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
       arrival_time: r.status === 'late' && r.arrival_time ? r.arrival_time : null,
     }))
 
-    // Delete all existing records for this session then reinsert
-    // This guarantees modifications are saved correctly
-    await supabase.from('attendance').delete().eq('session_id', activeSession.id)
-    const { error } = await supabase.from('attendance').insert(rows)
+    // Upsert (one row per student per session). The old "delete all then insert"
+    // lost the whole session's attendance whenever the insert failed.
+    let { error } = await supabase
+      .from('attendance')
+      .upsert(rows, { onConflict: 'session_id,student_id' })
+
+    // Fallback for databases without a UNIQUE (session_id, student_id) constraint
+    // or without an UPDATE policy on attendance: previous behaviour.
+    if (error) {
+      console.warn('Attendance upsert failed, using delete + insert:', error.message)
+      await supabase.from('attendance').delete().eq('session_id', activeSession.id)
+      ;({ error } = await supabase.from('attendance').insert(rows))
+    }
 
     if (error) console.error('Save error:', error.message)
 

@@ -5,8 +5,9 @@ import { NextResponse, type NextRequest } from 'next/server'
 import type { InvitePayload } from '@/types'
 
 export async function POST(request: NextRequest) {
-  const body: InvitePayload = await request.json()
-  const { email, role } = body
+  const body: InvitePayload = await request.json().catch(() => ({} as InvitePayload))
+  const role  = body.role
+  const email = String(body.email ?? '').trim().toLowerCase()
 
   if (!email || !role) {
     return NextResponse.json({ error: 'Email and role are required.' }, { status: 400 })
@@ -26,8 +27,12 @@ export async function POST(request: NextRequest) {
 
   if (!caller) return NextResponse.json({ error: 'Profile not found.' }, { status: 404 })
 
-  if (caller.role === 'teacher') {
-    return NextResponse.json({ error: 'Teachers cannot send invitations.' }, { status: 403 })
+  // Only school staff can invite, and only into a staff role (never parent / platform_admin)
+  if (!['super_admin', 'admin'].includes(caller.role) || !caller.school_id) {
+    return NextResponse.json({ error: 'You are not allowed to send invitations.' }, { status: 403 })
+  }
+  if (role !== 'admin' && role !== 'teacher') {
+    return NextResponse.json({ error: 'Invalid role.' }, { status: 400 })
   }
   if (caller.role === 'admin' && role !== 'teacher') {
     return NextResponse.json({ error: 'Admins can only invite teachers.' }, { status: 403 })
@@ -40,7 +45,8 @@ export async function POST(request: NextRequest) {
     .eq('email', email)
     .eq('school_id', caller.school_id)
     .eq('status', 'pending')
-    .single()
+    .limit(1)
+    .maybeSingle()
 
   if (existing) {
     return NextResponse.json(
@@ -84,12 +90,7 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({
     success: true,
     token: invitation.token,                          // handy for manual sharing
-    inviteUrl: `${
-      process.env.NEXT_PUBLIC_APP_URL
-      ?? (request.headers.get('x-forwarded-host')
-        ? `${request.headers.get('x-forwarded-proto') ?? 'https'}://${request.headers.get('x-forwarded-host')}`
-        : 'https://attendeffy.vercel.app')
-    }/auth/invite?token=${invitation.token}`,
+    inviteUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? request.nextUrl.origin}/auth/invite?token=${invitation.token}`,
     emailError: emailError ?? null,                   // null = email sent fine
   })
 }
