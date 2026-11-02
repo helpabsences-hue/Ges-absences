@@ -22,6 +22,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Session not found or not yours' }, { status: 403 })
   }
 
+  if (!Array.isArray(records) || records.some((r: any) =>
+        !r?.student_id || !['present', 'absent', 'late'].includes(r.status))) {
+    return NextResponse.json({ error: 'Invalid records' }, { status: 400 })
+  }
+
   // Upsert attendance records
   const upsertData = records.map((r: any) => ({
     session_id,
@@ -43,11 +48,16 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const session_id = searchParams.get('session_id')
 
+  if (!session_id) return NextResponse.json({ error: 'session_id required' }, { status: 400 })
+
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   const { data, error } = await supabase
     .from('attendance')
     .select('*, students(id, name, massar_code)')
-    .eq('session_id', session_id!)
+    .eq('session_id', session_id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ attendance: data })

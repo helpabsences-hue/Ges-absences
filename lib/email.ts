@@ -1,4 +1,5 @@
 // lib/email.ts
+import { escapeHtml } from './utils'
 
 const BREVO_API_KEY = process.env.BREVO_API_KEY!
 const FROM_EMAIL    = process.env.FROM_EMAIL || 'noreply@attendefy.com'
@@ -17,7 +18,10 @@ interface SendInviteParams {
 export async function sendInvitationEmail({
   to, role, schoolName, token, inviterName,
 }: SendInviteParams): Promise<void> {
-  const inviteUrl  = `${BASE_URL}/auth/invite?token=${token}`
+  const inviteUrl  = `${BASE_URL}/auth/invite?token=${encodeURIComponent(token)}`
+  const subjectSchool = schoolName
+  schoolName  = escapeHtml(schoolName)
+  inviterName = escapeHtml(inviterName)
   const roleLabel  = role === 'admin' ? 'Administrateur' : 'Enseignant'
 
   const html = `
@@ -104,7 +108,7 @@ export async function sendInvitationEmail({
     body: JSON.stringify({
       sender:      { name: FROM_NAME, email: FROM_EMAIL },
       to:          [{ email: to }],
-      subject:     `Invitation à rejoindre ${schoolName} — Attendefy`,
+      subject:     `Invitation à rejoindre ${subjectSchool} — Attendefy`,
       htmlContent: html,
     }),
   })

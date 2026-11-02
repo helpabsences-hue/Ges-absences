@@ -2,6 +2,7 @@
 // components/payments/PaymentModal.tsx — record / view / delete payments + receipts for one student
 
 import { useMemo, useState } from 'react'
+import { localDate } from '@/lib/utils'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import {
@@ -43,7 +44,7 @@ export default function PaymentModal({
   })
   const [amount, setAmount] = useState(() => prefill(defaultType))
   const [method, setMethod] = useState<PaymentMethod>('cash')
-  const [date, setDate]     = useState(new Date().toISOString().slice(0, 10))
+  const [date, setDate]     = useState(localDate())
   const [note, setNote]     = useState('')
   const [saving, setSaving] = useState(false)
 

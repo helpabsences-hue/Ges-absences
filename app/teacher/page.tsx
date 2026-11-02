@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic'
 // app/teacher/page.tsx
 
 import { useEffect, useState, useCallback } from 'react'
+import { localDate } from '@/lib/utils'
 import { useAttendanceStore } from '@/stores/useAttendanceStore'
 import { useAuthStore }       from '@/stores/useAuthStore'
 import { useSettingsStore }   from '@/stores/useSettingsStore'
@@ -148,7 +149,7 @@ export default function TeacherPage() {
   const checkSessionStatus = async (slots: TeacherPlanningFull[]) => {
     if (slots.length === 0) return
     const supabase = createClient()
-    const today    = new Date().toISOString().split('T')[0]
+    const today    = localDate()
 
     // Get sessions for today
     const { data: sessions } = await supabase

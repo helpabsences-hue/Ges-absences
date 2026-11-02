@@ -2,6 +2,7 @@
 // components/analytics/attendance-chart.tsx
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { localDate } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
@@ -58,7 +59,7 @@ export function AttendanceChart({ lang = 'fr' }: { lang?: Lang }) {
     const dates: string[] = []
     for (let i = 6; i >= 0; i--) {
       const d = new Date(); d.setDate(d.getDate() - i)
-      dates.push(d.toISOString().split('T')[0])
+      dates.push(localDate(d))
     }
     const { data: records } = await supabase.current
       .from('attendance')

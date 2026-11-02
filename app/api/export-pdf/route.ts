@@ -1,34 +1,57 @@
 // app/api/export-pdf/route.ts
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse, type NextRequest } from 'next/server'
+import { escapeHtml as esc } from '@/lib/utils'
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const dateFrom      = searchParams.get('from')   ?? ''
   const dateTo        = searchParams.get('to')     ?? ''
   const selectedGroup = searchParams.get('group')  ?? ''
-  const lang          = searchParams.get('lang')   ?? 'fr'
+  const langParam     = searchParams.get('lang')   ?? 'fr'
+  const lang          = ['fr', 'en', 'ar'].includes(langParam) ? langParam : 'fr'
   const filterType    = searchParams.get('filter') ?? 'all'
+
+  if (!DATE_RE.test(dateFrom) || !DATE_RE.test(dateTo)) {
+    return new NextResponse('Invalid date range', { status: 400 })
+  }
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return new NextResponse('Unauthorized', { status: 401 })
 
   const { data: profile } = await supabase
-    .from('profiles').select('school_id, name').eq('id', user.id).single()
+    .from('profiles').select('school_id, name, role').eq('id', user.id).single()
+
+  if (!profile?.school_id || !['super_admin', 'admin'].includes(profile.role)) {
+    return new NextResponse('Forbidden', { status: 403 })
+  }
 
   const { data: school } = await supabase
-    .from('schools').select('name, city').eq('id', profile?.school_id).single()
+    .from('schools').select('name, city').eq('id', profile.school_id).single()
 
-  const { data: rows } = await supabase
-    .from('attendance')
-    .select(`status, reason,
-      students(name, massar_code, groups(name)),
-      class_sessions!inner(session_date,
-        teacher_planning!inner(start_time, end_time, group_id,
-          groups(name), courses(name)))`)
-    .gte('class_sessions.session_date', dateFrom)
-    .lte('class_sessions.session_date', dateTo)
+  // Supabase returns at most 1000 rows per request — read page by page
+  const rows: any[] = []
+  const PAGE = 1000
+  for (let from = 0; ; from += PAGE) {
+    const { data: page, error } = await supabase
+      .from('attendance')
+      .select(`id, status, reason,
+        students!inner(name, massar_code, school_id, groups(name)),
+        class_sessions!inner(session_date,
+          teacher_planning!inner(start_time, end_time, group_id,
+            groups(name), courses(name)))`)
+      .eq('students.school_id', profile.school_id)
+      .gte('class_sessions.session_date', dateFrom)
+      .lte('class_sessions.session_date', dateTo)
+      .order('id', { ascending: true })
+      .range(from, from + PAGE - 1)
+    if (error) return new NextResponse('Query failed', { status: 500 })
+    rows.push(...(page ?? []))
+    if (!page || page.length < PAGE) break
+  }
 
   const valid    = (rows ?? []).filter((r: any) => r.class_sessions?.session_date)
   const filtered = selectedGroup
@@ -47,6 +70,10 @@ export async function GET(request: NextRequest) {
       if (filterType === 'late')   return r.status === 'late'
       return r.status === 'absent' || r.status === 'late'
     })
+    // Sort on the real date (newest first), not on the translated text
+    .sort((a: any, b: any) =>
+      (b.class_sessions.session_date + (b.class_sessions.teacher_planning?.start_time ?? ''))
+        .localeCompare(a.class_sessions.session_date + (a.class_sessions.teacher_planning?.start_time ?? '')))
     .map((r: any) => ({
       student: r.students?.name ?? '—',
       massar:  r.students?.massar_code ?? '—',
@@ -61,7 +88,6 @@ export async function GET(request: NextRequest) {
       status:  r.status,
       reason:  r.reason ?? '',
     }))
-    .sort((a: any, b: any) => b.date.localeCompare(a.date))
 
   const L: Record<string, Record<string, string>> = {
     fr: { title:"Rapport d'Assiduité", period:"Période", school:"Établissement", generatedOn:"Généré le",
@@ -93,7 +119,7 @@ export async function GET(request: NextRequest) {
 <html lang="${lang}" dir="${dir}">
 <head>
 <meta charset="UTF-8"/>
-<title>${t.title} — ${school?.name ?? 'Attendefy'}</title>
+<title>${t.title} — ${esc(school?.name ?? 'Attendefy')}</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
   body{font-family:'Segoe UI',Arial,sans-serif;color:#1e293b;background:#fff;font-size:13px}
@@ -126,13 +152,13 @@ export async function GET(request: NextRequest) {
 <body>
 <div class="hdr">
   <div><h1>Attend<span>efy</span></h1><p style="color:#bfdbfe;font-size:11px;margin-top:2px">${t.generatedBy}</p></div>
-  <div class="hdr-right"><div class="sn">${school?.name??'—'}</div><div class="mt">${school?.city??''}</div></div>
+  <div class="hdr-right"><div class="sn">${esc(school?.name??'—')}</div><div class="mt">${esc(school?.city??'')}</div></div>
 </div>
 <div class="body">
   <div class="info">
     <div class="info-item"><label>${t.period}</label><span>${dateFrom} → ${dateTo}</span></div>
     <div class="info-item"><label>${t.generatedOn}</label><span>${now}</span></div>
-    <div class="info-item"><label>${t.school}</label><span>${school?.name??'—'}</span></div>
+    <div class="info-item"><label>${t.school}</label><span>${esc(school?.name??'—')}</span></div>
   </div>
   <div class="stats">
     <div class="sc"><div class="v">${total}</div><div class="l">${t.totalSessions}</div></div>
@@ -150,16 +176,16 @@ export async function GET(request: NextRequest) {
         <th>${t.type}</th><th>${t.reason}</th>
       </tr></thead><tbody>
       ${absenceRows.map((r: any) => `<tr>
-        <td><strong>${r.student}</strong></td><td>${r.massar}</td><td>${r.group}</td>
-        <td>${r.course}</td><td>${r.date}</td>
-        <td style="font-family:monospace">${r.time}</td>
-        <td><span class="badge ${r.status}">${r.status==='absent'?t.absentLabel:t.lateLabel}</span></td>
-        <td>${r.reason||'—'}</td>
+        <td><strong>${esc(r.student)}</strong></td><td>${esc(r.massar)}</td><td>${esc(r.group)}</td>
+        <td>${esc(r.course)}</td><td>${esc(r.date)}</td>
+        <td style="font-family:monospace">${esc(r.time)}</td>
+        <td><span class="badge ${r.status === 'absent' ? 'absent' : 'late'}">${r.status==='absent'?t.absentLabel:t.lateLabel}</span></td>
+        <td>${esc(r.reason||'—')}</td>
       </tr>`).join('')}
       </tbody></table>`}
 </div>
 <div class="footer">
-  <span>Attendefy — ${school?.name??''}</span>
+  <span>Attendefy — ${esc(school?.name??'')}</span>
   <span>${now}</span>
 </div>
 <script>window.onload=()=>{window.print()}</script>

@@ -2,6 +2,7 @@
 // components/analytics/admin-stats.tsx
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { localDate } from '@/lib/utils'
 import { StatCard } from '@/components/analytics/stat-card'
 import { Users, GraduationCap, AlertCircle, BarChart3 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -45,7 +46,7 @@ export function AdminStats({ lang = 'fr' }: { lang?: Lang }) {
   const supabase = useRef(createClient())
 
   const fetchStats = useCallback(async () => {
-    const today = new Date().toISOString().split('T')[0]
+    const today = localDate()
     const sb    = supabase.current
 
     const [
