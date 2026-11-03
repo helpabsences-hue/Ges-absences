@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Attendefy video</title>
+<style>
+  :root{
+    --bg:#050816; --bg2:#0b1230; --card:#0f172a; --line:#1e293b;
+    --blue:#2563eb; --blue2:#3b82f6; --sky:#93c5fd; --text:#f8fafc; --muted:#94a3b8;
+    --green:#22c55e; --red:#ef4444; --amber:#f59e0b;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:1920px;height:1080px;overflow:hidden;background:var(--bg)}
+  body{font-family:Inter,"DejaVu Sans",sans-serif;color:var(--text);-webkit-font-smoothing:antialiased}
+  #stage{position:relative;width:1920px;height:1080px;overflow:hidden;
+    background:radial-gradient(1200px 700px at 80% -10%,#1e3a8a55,transparent 60%),
+               radial-gradient(900px 600px at -10% 110%,#1d4ed833,transparent 60%),var(--bg)}
+  .grid{position:absolute;inset:0;opacity:.07;
+    background-image:linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px);
+    background-size:80px 80px}
+  .scene{position:absolute;inset:0;opacity:0}
+  [data-in]{will-change:transform,opacity}
+  .abs{position:absolute}
+
+  /* text */
+  .kicker{font-size:26px;font-weight:600;color:var(--sky);letter-spacing:.14em;text-transform:uppercase}
+  .h1{font-size:92px;font-weight:800;letter-spacing:-.03em;line-height:1.02}
+  .h2{font-size:62px;font-weight:800;letter-spacing:-.025em;line-height:1.08}
+  .p{font-size:30px;color:var(--muted);line-height:1.45}
+  .brand em{font-style:normal;color:var(--blue2)}
+  .step{display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;border-radius:18px;
+    background:var(--blue);font-size:32px;font-weight:800;box-shadow:0 10px 30px #2563eb66}
+
+  /* browser frame */
+  .browser{position:absolute;border-radius:18px;overflow:hidden;background:#0b1020;
+    border:1px solid #24304a;box-shadow:0 40px 120px #000a,0 0 0 1px #ffffff08}
+  .browser .bar{height:44px;background:#111a2e;display:flex;align-items:center;gap:10px;padding:0 18px;border-bottom:1px solid #1e293b}
+  .browser .dot{width:13px;height:13px;border-radius:50%}
+  .browser .url{margin-left:18px;height:26px;flex:0 0 420px;border-radius:8px;background:#0b1222;color:#64748b;
+    font-size:15px;display:flex;align-items:center;padding:0 12px}
+  .browser .view{position:relative;overflow:hidden}
+  .browser .view img{position:absolute;left:0;top:0;transform-origin:0 0}
+  .ring{position:absolute;border:4px solid var(--sky);border-radius:16px;box-shadow:0 0 0 9999px #05081655,0 0 40px #3b82f6aa}
+
+  .bullet{display:flex;gap:18px;align-items:flex-start;font-size:29px;color:#cbd5e1;line-height:1.35}
+  .bullet .ic{flex:0 0 40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800}
+
+  /* problem cards */
+  .pcard{width:500px;padding:40px 36px;border-radius:24px;background:#0f172acc;border:1px solid #24304a;position:absolute}
+  .pcard .emo{font-size:56px;margin-bottom:22px}
+  .pcard .t{font-size:33px;font-weight:700;line-height:1.2;position:relative;display:inline-block;white-space:nowrap}
+  .pcard .s{font-size:24px;color:var(--muted);margin-top:12px;line-height:1.4}
+  .strike{position:absolute;left:-6px;right:-6px;top:52%;height:6px;background:var(--red);border-radius:3px;transform-origin:left center}
+
+  /* feature tiles */
+  .tile{position:absolute;width:520px;height:200px;border-radius:24px;background:linear-gradient(160deg,#111c38,#0b1226);
+    border:1px solid #24304a;padding:34px 34px;display:flex;gap:26px;align-items:center}
+  .tile .ic{flex:0 0 84px;height:84px;border-radius:22px;display:flex;align-items:center;justify-content:center;font-size:42px}
+  .tile .t{font-size:32px;font-weight:700}
+  .tile .s{font-size:22px;color:var(--muted);margin-top:8px;line-height:1.35}
+
+  .pill{display:inline-block;padding:14px 30px;border-radius:999px;font-size:30px;font-weight:700}
+  .phone{position:absolute;width:300px;height:600px;border-radius:44px;background:#0b1020;border:10px solid #1e293b;
+    box-shadow:0 40px 100px #000b;overflow:hidden}
+  .notif{position:absolute;left:14px;right:14px;top:70px;border-radius:20px;background:#f8fafc;color:#0f172a;padding:16px 18px;
+    box-shadow:0 10px 30px #0006}
+  .notif .a{font-size:14px;color:#64748b;display:flex;justify-content:space-between}
+  .notif .b{font-size:17px;font-weight:700;margin-top:6px}
+  .notif .c{font-size:15px;color:#334155;margin-top:4px;line-height:1.35}
+  .progress{position:absolute;left:0;bottom:0;height:6px;background:linear-gradient(90deg,var(--blue),var(--sky))}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="grid"></div>
+
+  <!-- ═══ 1. INTRO 0 – 4.5 ═══ -->
+  <div class="scene" data-scene="0,4.6">
+    <img class="abs" src="../../public/logo_Attendefy.png" style="left:810px;top:200px;width:300px"
+         data-in="0.2" data-anim="pop">
+    <div class="abs h1 brand" style="left:0;right:0;top:470px;text-align:center;font-size:120px" data-in="0.8" data-anim="up">Attend<em>efy</em></div>
+    <div class="abs p" style="left:0;right:0;top:640px;text-align:center;font-size:40px;color:#cbd5e1" data-in="1.4" data-anim="up">
+      La gestion des absences scolaires, <span style="color:var(--sky);font-weight:700">simplifiée.</span></div>
+    <div class="abs" style="left:0;right:0;top:760px;text-align:center" data-in="2.0" data-anim="up">
+      <span class="pill" style="background:#0f172a;border:1px solid #24304a;color:var(--muted);font-size:26px;font-weight:500">
+        Enseignants · Direction · Parents — une seule plateforme</span></div>
+  </div>
+
+  <!-- ═══ 2. PROBLEM 4.5 – 10 ═══ -->
+  <div class="scene" data-scene="4.5,10.1">
+    <div class="abs kicker" style="left:0;right:0;top:150px;text-align:center" data-in="4.7" data-anim="up">Aujourd'hui, dans beaucoup d'écoles…</div>
+    <div class="abs h2" style="left:0;right:0;top:205px;text-align:center" data-in="4.9" data-anim="up">Le suivi des absences prend trop de temps.</div>
+    <div class="pcard" style="left:150px;top:420px" data-in="5.4" data-anim="up">
+      <div class="emo">📋</div><div class="t">Feuilles d'appel papier<div class="strike" data-in="7.9" data-anim="wipe"></div></div><div class="s">perdues, illisibles, à ressaisir</div></div>
+    <div class="pcard" style="left:710px;top:420px" data-in="5.8" data-anim="up">
+      <div class="emo">📞</div><div class="t">Parents appelés 1 par 1<div class="strike" data-in="8.2" data-anim="wipe"></div></div><div class="s">un temps fou, souvent trop tard</div></div>
+    <div class="pcard" style="left:1270px;top:420px" data-in="6.2" data-anim="up">
+      <div class="emo">📊</div><div class="t">Statistiques sur Excel<div class="strike" data-in="8.5" data-anim="wipe"></div></div><div class="s">des heures de calcul chaque mois</div></div>
+    <div class="abs h2" style="left:0;right:0;top:850px;text-align:center;font-size:52px" data-in="8.8" data-anim="up">
+      Avec <span class="brand">Attend<em>efy</em></span>, tout est automatique.</div>
+  </div>
+
+  <!-- ═══ 3. TEACHER 10 – 17.5 ═══ -->
+  <div class="scene" data-scene="10,17.6">
+    <div class="abs" style="left:110px;top:250px;width:560px">
+      <div data-in="10.3" data-anim="left"><span class="step">1</span></div>
+      <div class="h2" style="margin-top:34px;font-size:56px" data-in="10.5" data-anim="left">L'enseignant fait l'appel en quelques secondes</div>
+      <div style="margin-top:44px;display:flex;flex-direction:column;gap:26px">
+        <div class="bullet" data-in="11.4" data-anim="left"><div class="ic" style="background:#14532d;color:var(--green)">✓</div>Ses cours du jour s'affichent automatiquement</div>
+        <div class="bullet" data-in="12.0" data-anim="left"><div class="ic" style="background:#3b0d0d;color:var(--red)">✕</div>Présent, absent ou en retard : un clic par élève</div>
+        <div class="bullet" data-in="12.6" data-anim="left"><div class="ic" style="background:#1e3a8a;color:var(--sky)">⚡</div>Sur téléphone, tablette ou ordinateur</div>
+      </div>
+    </div>
+    <div class="browser" style="left:740px;top:200px;width:1100px" data-in="10.4" data-anim="right">
+      <div class="bar"><span class="dot" style="background:#ef4444"></span><span class="dot" style="background:#f59e0b"></span><span class="dot" style="background:#22c55e"></span><span class="url">attendefy.com/teacher</span></div>
+      <div class="view" style="height:600px">
+        <img src="../../public/screenshot-teacher.png" style="width:1917px" data-kb="10,17.6, -550,-80,1.146, -620,-470,1.25">
+        <div class="ring" style="left:255px;top:240px;width:720px;height:112px" data-in="14.2" data-out="17.0" data-anim="pop"
+             data-follow="teacher"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 4. DASHBOARD 17.5 – 25 ═══ -->
+  <div class="scene" data-scene="17.5,25.1">
+    <div class="abs" style="left:110px;top:240px;width:560px">
+      <div data-in="17.8" data-anim="left"><span class="step">2</span></div>
+      <div class="h2" style="margin-top:34px;font-size:56px" data-in="18.0" data-anim="left">La direction voit tout, en temps réel</div>
+      <div style="margin-top:44px;display:flex;flex-direction:column;gap:26px">
+        <div class="bullet" data-in="18.9" data-anim="left"><div class="ic" style="background:#1e3a8a;color:var(--sky)">◎</div>Absences et taux d'assiduité du jour</div>
+        <div class="bullet" data-in="19.5" data-anim="left"><div class="ic" style="background:#14532d;color:var(--green)">↗</div>Tendances par jour, groupe et matière</div>
+        <div class="bullet" data-in="20.1" data-anim="left"><div class="ic" style="background:#3b0d0d;color:var(--red)">!</div>Alertes dès qu'un élève s'absente</div>
+      </div>
+    </div>
+    <div class="browser" style="left:740px;top:170px;width:1100px" data-in="17.9" data-anim="right">
+      <div class="bar"><span class="dot" style="background:#ef4444"></span><span class="dot" style="background:#f59e0b"></span><span class="dot" style="background:#22c55e"></span><span class="url">attendefy.com/dashboard</span></div>
+      <div class="view" style="height:560px">
+        <img src="../../public/screenshot-dashboard.png" style="width:1917px" data-kb="17.5,25.1, -60,0,0.62, -160,-30,0.66">
+        <div class="ring" data-ringbox="dash1" data-in="20.6" data-out="22.6" data-anim="pop"></div>
+        <div class="ring" data-ringbox="dash2" data-in="22.6" data-out="24.8" data-anim="pop"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 5. PARENT ALERT 25 – 32 ═══ -->
+  <div class="scene" data-scene="25,32.1">
+    <div class="abs" style="left:110px;top:240px;width:600px">
+      <div data-in="25.3" data-anim="left"><span class="step">3</span></div>
+      <div class="h2" style="margin-top:34px;font-size:56px" data-in="25.5" data-anim="left">Les parents sont prévenus automatiquement</div>
+      <div style="margin-top:44px;display:flex;flex-direction:column;gap:26px">
+        <div class="bullet" data-in="26.4" data-anim="left"><div class="ic" style="background:#3b0d0d;color:var(--red)">✉</div>Un e-mail part dès que le seuil d'absences est atteint</div>
+        <div class="bullet" data-in="27.0" data-anim="left"><div class="ic" style="background:#1e3a8a;color:var(--sky)">⚙</div>Vous choisissez le seuil (3, 5, 10 absences…)</div>
+        <div class="bullet" data-in="27.6" data-anim="left"><div class="ic" style="background:#14532d;color:var(--green)">☺</div>Plus aucun appel à passer</div>
+      </div>
+    </div>
+    <div class="browser" style="left:790px;top:190px;width:820px" data-in="25.4" data-anim="right">
+      <div class="bar"><span class="dot" style="background:#ef4444"></span><span class="dot" style="background:#f59e0b"></span><span class="dot" style="background:#22c55e"></span><span class="url">Boîte de réception</span></div>
+      <div class="view" style="height:620px;background:#fff">
+        <img src="../../public/screenshot-email.png" style="width:1551px" data-kb="25,32.1, -464,-40,1.08, -540,-180,1.15">
+      </div>
+    </div>
+    <div class="phone" style="left:1520px;top:330px" data-in="28.4" data-anim="right">
+      <div style="position:absolute;inset:0;background:linear-gradient(170deg,#1e3a8a,#0b1020 60%)"></div>
+      <div style="position:absolute;top:22px;left:0;right:0;text-align:center;font-size:15px;color:#cbd5e1;font-weight:600">09:57</div>
+      <div class="notif" data-in="29.0" data-anim="drop">
+        <div class="a"><span>✉ Mail · Attendefy</span><span>maintenant</span></div>
+        <div class="b">⚠️ Alerte absences</div>
+        <div class="c">Votre enfant Hatim a atteint 3 absences ce mois-ci.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 6. PARENT SPACE 32 – 38.5 ═══ -->
+  <div class="scene" data-scene="32,38.6">
+    <div class="abs" style="left:110px;top:250px;width:560px">
+      <div data-in="32.3" data-anim="left"><span class="step">4</span></div>
+      <div class="h2" style="margin-top:34px;font-size:56px" data-in="32.5" data-anim="left">Un espace parent pour suivre son enfant</div>
+      <div style="margin-top:44px;display:flex;flex-direction:column;gap:26px">
+        <div class="bullet" data-in="33.4" data-anim="left"><div class="ic" style="background:#1e3a8a;color:var(--sky)">👤</div>Inscription en 1 minute avec le code Massar</div>
+        <div class="bullet" data-in="34.0" data-anim="left"><div class="ic" style="background:#14532d;color:var(--green)">%</div>Taux de présence, absences et retards</div>
+        <div class="bullet" data-in="34.6" data-anim="left"><div class="ic" style="background:#3b0d0d;color:var(--red)">🕑</div>Historique détaillé, séance par séance</div>
+      </div>
+    </div>
+    <div class="browser" style="left:740px;top:200px;width:1100px" data-in="32.4" data-anim="right">
+      <div class="bar"><span class="dot" style="background:#ef4444"></span><span class="dot" style="background:#f59e0b"></span><span class="dot" style="background:#22c55e"></span><span class="url">attendefy.com/parent</span></div>
+      <div class="view" style="height:600px">
+        <img src="../../public/screenshot-parent.png" style="width:1916px" data-kb="32,38.6, -644,-125,1.25, -676,-572,1.3">
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 7. FEATURES 38.5 – 45 ═══ -->
+  <div class="scene" data-scene="38.5,45.1">
+    <div class="abs kicker" style="left:0;right:0;top:120px;text-align:center" data-in="38.7" data-anim="up">Et bien plus encore</div>
+    <div class="abs h2" style="left:0;right:0;top:175px;text-align:center" data-in="38.9" data-anim="up">Tout ce dont votre école a besoin</div>
+    <div class="tile" style="left:150px;top:350px" data-in="39.4" data-anim="up"><div class="ic" style="background:#1e3a8a">📄</div><div><div class="t">Rapports PDF &amp; Excel</div><div class="s">par période, groupe ou élève, en 1 clic</div></div></div>
+    <div class="tile" style="left:700px;top:350px" data-in="39.7" data-anim="up"><div class="ic" style="background:#14532d">💳</div><div><div class="t">Suivi des paiements</div><div class="s">mois payés et impayés de chaque élève</div></div></div>
+    <div class="tile" style="left:1250px;top:350px" data-in="40.0" data-anim="up"><div class="ic" style="background:#3b0764">✨</div><div><div class="t">Assistant IA</div><div class="s">analyses et élèves à risque détectés</div></div></div>
+    <div class="tile" style="left:150px;top:590px" data-in="40.3" data-anim="up"><div class="ic" style="background:#78350f">🗓</div><div><div class="t">Planning hebdomadaire</div><div class="s">cours, groupes et enseignants</div></div></div>
+    <div class="tile" style="left:700px;top:590px" data-in="40.6" data-anim="up"><div class="ic" style="background:#164e63">🌍</div><div><div class="t">3 langues</div><div class="s">Français · English · العربية</div></div></div>
+    <div class="tile" style="left:1250px;top:590px" data-in="40.9" data-anim="up"><div class="ic" style="background:#7f1d1d">🔒</div><div><div class="t">Données sécurisées</div><div class="s">chaque école isolée, sauvegardes</div></div></div>
+    <div class="abs p" style="left:0;right:0;top:860px;text-align:center;color:#cbd5e1" data-in="41.6" data-anim="up">
+      Import des élèves depuis <b style="color:#fff">Massar</b> · Mode sombre et clair · 100&nbsp;% en ligne, rien à installer</div>
+  </div>
+
+  <!-- ═══ 8. CTA 45 – 51 ═══ -->
+  <div class="scene" data-scene="45,51.5">
+    <img class="abs" src="../../public/logo_Attendefy.png" style="left:860px;top:150px;width:200px" data-in="45.2" data-anim="pop">
+    <div class="abs h1" style="left:0;right:0;top:370px;text-align:center" data-in="45.6" data-anim="up">Essayez gratuitement</div>
+    <div class="abs h1" style="left:0;right:0;top:470px;text-align:center;color:var(--sky)" data-in="45.9" data-anim="up">pendant 30 jours.</div>
+    <div class="abs p" style="left:0;right:0;top:610px;text-align:center;font-size:34px" data-in="46.5" data-anim="up">Sans engagement · Mise en place en quelques minutes</div>
+    <div class="abs" style="left:0;right:0;top:730px;text-align:center" data-in="47.1" data-anim="pop">
+      <span class="pill" style="background:var(--blue);font-size:44px;padding:24px 56px;box-shadow:0 20px 60px #2563eb77">www.attendefy.com</span></div>
+  </div>
+
+  <div class="progress" id="progress"></div>
+</div>
+
+<script>
+const DUR = 51.5
+const clamp = (x,a=0,b=1)=>Math.max(a,Math.min(b,x))
+const ease  = x => 1-Math.pow(1-x,3)               // easeOutCubic
+const eio   = x => x<.5 ? 4*x*x*x : 1-Math.pow(-2*x+2,3)/2
+const lerp  = (a,b,p)=>a+(b-a)*p
+
+// Rings placed on screenshot coordinates (image px) — converted with the live image transform
+const RINGBOX = {
+  dash1: [1130,140,1855,370],   // absences + attendance-rate cards
+  dash2: [1382,398,1855,890],   // recent alerts
+  teacher:[560,497,1360,727],   // today's courses
+}
+
+function anim(el, t){
+  const tin  = parseFloat(el.dataset.in)
+  const tout = el.dataset.out ? parseFloat(el.dataset.out) : null
+  const kind = el.dataset.anim || 'fade'
+  let p = ease(clamp((t - tin) / 0.7))
+  let o = p
+  if (tout !== null) o *= 1 - clamp((t - tout) / 0.35)
+  let tf = ''
+  switch(kind){
+    case 'up':    tf = `translateY(${(1-p)*40}px)`; break
+    case 'left':  tf = `translateX(${(1-p)*-60}px)`; break
+    case 'right': tf = `translateX(${(1-p)*80}px)`; break
+    case 'drop':  tf = `translateY(${(1-p)*-60}px)`; break
+    case 'pop':   { const s = 0.85 + 0.15*ease(clamp((t-tin)/0.5)); tf = `scale(${s})`; break }
+    case 'wipe':  { const w = ease(clamp((t-tin)/0.4)); el.style.transform = `scaleX(${w})`; el.style.opacity = w>0?1:0; return }
+  }
+  el.style.opacity = o
+  el.style.transform = tf
+}
+
+function kenburns(img, t){
+  const v = img.dataset.kb.split(',').map(Number)
+  const [a,b,x0,y0,s0,x1,y1,s1] = v
+  const p = eio(clamp((t-a)/(b-a)))
+  const x = lerp(x0*0+x0,x1,p), y = lerp(y0,y1,p), s = lerp(s0,s1,p)
+  img.style.transform = `translate(${x}px,${y}px) scale(${s})`
+  img._tf = {x,y,s}
+}
+
+function placeRings(scene){
+  const img = scene.querySelector('img[data-kb]')
+  if (!img || !img._tf) return
+  scene.querySelectorAll('.ring').forEach(r=>{
+    const key = r.dataset.ringbox || r.dataset.follow
+    const box = RINGBOX[key]; if(!box) return
+    const {x,y,s} = img._tf, pad = 10
+    r.style.left   = (x + box[0]*s - pad) + 'px'
+    r.style.top    = (y + box[1]*s - pad) + 'px'
+    r.style.width  = ((box[2]-box[0])*s + 2*pad) + 'px'
+    r.style.height = ((box[3]-box[1])*s + 2*pad) + 'px'
+  })
+}
+
+window.seek = function(t){
+  document.querySelectorAll('.scene').forEach(sc=>{
+    const [a,b] = sc.dataset.scene.split(',').map(Number)
+    const vis = t >= a-0.01 && t <= b
+    sc.style.display = vis ? 'block' : 'none'
+    if(!vis) return
+    const fin  = clamp((t-a)/0.45), fout = 1 - clamp((t-(b-0.45))/0.45)
+    sc.style.opacity = Math.min(fin, fout)
+    sc.querySelectorAll('img[data-kb]').forEach(i=>kenburns(i,t))
+    sc.querySelectorAll('[data-in]').forEach(e=>anim(e,t))
+    placeRings(sc)
+  })
+  document.getElementById('progress').style.width = (t/DUR*100)+'%'
+}
+window.DUR = DUR
+window.seek(0)
+</script>
+</body>
+</html>
