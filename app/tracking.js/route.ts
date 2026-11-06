@@ -103,7 +103,7 @@ export function GET() {
       'background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:14px;padding:16px 18px;' +
       'font:14px/1.5 Inter,system-ui,sans-serif;box-shadow:0 10px 40px rgba(0,0,0,.45)';
     b.innerHTML = '<div style="margin-bottom:12px">Nous utilisons des cookies pour mesurer nos publicités et améliorer le site. ' +
-      'Aucune donnée de vos élèves n\\'est concernée.</div>' +
+      'Aucune donnée de vos élèves n\\'est concernée. <a href="/confidentialite.html" style="color:#93c5fd">En savoir plus</a></div>' +
       '<div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">' +
       '<button type="button" data-c="no"  style="background:transparent;color:#94a3b8;border:1px solid #334155;border-radius:9px;padding:8px 14px;cursor:pointer;font:inherit">Refuser</button>' +
       '<button type="button" data-c="yes" style="background:#2563eb;color:#fff;border:0;border-radius:9px;padding:8px 16px;cursor:pointer;font:inherit;font-weight:600">Accepter</button></div>';
