@@ -6,14 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Attendefy — Absences, parents et paiements scolaires</title>
   <meta name="description" content="Attendefy : import direct Massar, prise de présence mobile, alertes parents, frais de scolarité et reçus. Conçu pour les écoles privées au Maroc. Essai gratuit 30 jours." />
-  <!-- Google Analytics -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-XXXXXXXXXX');
-  </script>
+  <!-- Ads & analytics (Meta Pixel, Google, TikTok) — IDs are set in Vercel, loaded after cookie consent -->
+  <script src="/tracking.js" defer></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
   <style>
@@ -271,6 +265,7 @@
       <a href="#demo">Démo</a>
       <a href="#pricing">Tarifs</a>
       <a href="https://wa.me/212628395183" target="_blank">Contact</a>
+      <a href="/auth/login">Connexion</a>
     </div>
     <a href="https://www.attendefy.com/auth/register" class="nav-cta">Essai gratuit 30 jours</a>
   </nav>

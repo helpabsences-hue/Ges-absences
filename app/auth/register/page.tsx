@@ -294,6 +294,8 @@ export default function RegisterPage() {
       setLoading(false)
       return
     }
+    // Ads conversion: a school completed its sign-up (see /tracking.js)
+    ;(window as any).attTrack?.('signup', { content_name: 'school_trial' })
     setSent(true)
   }
 
