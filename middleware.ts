@@ -33,6 +33,13 @@ export async function middleware(request: NextRequest) {
  
   if (isPublic) return supabaseResponse
  
+  // ── Not logged in on "/" → public landing page (where ads send visitors) ──
+  if (!user && pathname === '/') {
+    const url = request.nextUrl.clone()
+    url.pathname = '/landing.html'
+    return NextResponse.rewrite(url)
+  }
+
   // ── Not logged in → login ─────────────────────────────
   if (!user) {
     const url = request.nextUrl.clone()
